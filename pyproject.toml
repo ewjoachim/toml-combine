@@ -1,10 +1,21 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "uv-dynamic-versioning"]
 build-backend = "hatchling.build"
+
+
+[tool.uv-dynamic-versioning]
+pattern = "default-unprefixed"
+
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.hatch.build.targets.sdist]
+
+[tool.hatch.build.targets.wheel]
 
 [project]
 name = "toml-combine"
-version = "0.1.0"
+dynamic = ["version"]
 description = "A tool for combining complex configurations in TOML format."
 readme = "README.md"
 requires-python = ">=3.9"
