@@ -10,7 +10,7 @@ from typing import Any
 from . import exceptions
 
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass()
 class Output:
     dimensions: Mapping[str, str]
 
@@ -22,7 +22,7 @@ class Output:
         return f"Output(id={self.id})"
 
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass()
 class Override:
     when: Mapping[str, str | list[str]]
     config: Mapping[str, Any]
@@ -31,7 +31,7 @@ class Override:
         return f"Override({self.when})"
 
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass()
 class Config:
     dimensions: Mapping[str, list[str]]
     outputs: list[Output]
