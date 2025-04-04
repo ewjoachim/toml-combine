@@ -50,6 +50,7 @@ jobs:
         with:
           fetch-depth: 1
           fetch-tags: true
+          ref: ${{ github.ref }}
 
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@f94ec6bedd8674c4426838e6b50417d36b6ab231 # v5
