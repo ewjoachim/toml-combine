@@ -1,0 +1,134 @@
+[dimensions]
+environment = ["staging", "production"]
+type = ["service", "job"]
+stack = ["next", "django"]
+service = ["api", "admin"]
+job = ["manage", "special-command"]
+
+[[output]]
+environment = "staging"
+stack = "next"
+type = "service"
+
+[[output]]
+environment = "staging"
+stack = "django"
+type = "service"
+service = "api"
+
+[[output]]
+environment = "staging"
+stack = "django"
+type = "service"
+service = "admin"
+
+[[output]]
+environment = "staging"
+stack = "django"
+type = "job"
+job = "manage"
+
+[[output]]
+environment = "staging"
+stack = "django"
+type = "job"
+job = "special-command"
+
+[[output]]
+environment = "production"
+stack = "next"
+type = "service"
+
+[[output]]
+environment = "production"
+stack = "django"
+type = "service"
+service = "api"
+
+[[output]]
+environment = "production"
+stack = "django"
+type = "service"
+service = "admin"
+
+[[output]]
+environment = "production"
+stack = "django"
+type = "job"
+job = "manage"
+
+[[output]]
+environment = "production"
+stack = "django"
+type = "job"
+job = "special-command"
+
+[default]
+registry.region = "us"
+
+[[override]]
+when.environment = "production"
+project = "project-production"
+
+[[override]]
+when.environment = "staging"
+project = "project-staging"
+
+[[override]]
+when.type = "service"
+containers.telemetry.enabled = true
+containers.app.service.min_scale = 1
+
+[[override]]
+when.environment = "staging"
+when.type = "service"
+containers.app.service.min_scale = 0
+
+[[override]]
+when.stack = "next"
+containers.app.name = "frontend"
+containers.app.env.NEXT_PUBLIC_FOO = "bar"
+
+[[override]]
+when.stack = "next"
+when.environment = "staging"
+containers.app.env.NEXT_PUBLIC_FOO = "baz"
+
+[[override]]
+when.stack = "django"
+cloudsql_instance = "production-postgres"
+containers.app.name = "backend"
+containers.app.env.APP_FOO = "bar"
+
+[[override]]
+when.environment = "staging"
+when.stack = "django"
+cloudsql_instance = "staging-postgres"
+containers.app.env.APP_FOO = "qux"
+
+[[override]]
+when.service = "admin"
+containers.app.name = "admin"
+containers.app.env.APP_ADMIN_ENABLED = true
+containers.app.env.APP_ID = 1234
+
+[[override]]
+when.service = "admin"
+when.environment = "staging"
+containers.app.env.APP_ID = 5678
+
+[[override]]
+when.type = "job"
+containers.app.job.max_retries = 1
+
+[[override]]
+when.job = "manage"
+containers.app.name = "manage"
+containers.app.command = ["./manage.py"]
+
+[[override]]
+when.job = "special-command"
+containers.app.name = "special-command"
+containers.app.container_cpu = 8
+containers.app.command = ["./manage.py"]
+containers.app.args = ["special-command"]

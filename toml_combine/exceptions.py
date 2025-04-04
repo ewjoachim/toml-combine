@@ -1,0 +1,31 @@
+from __future__ import annotations
+
+
+class TomlCombineError(Exception):
+    """There was an error in the toml-combine library."""
+
+    def __init__(self, message: str = "", **kwargs) -> None:
+        message = message or type(self).__doc__ or ""
+        message = message.format(**kwargs)
+
+        super().__init__(message)
+
+
+class TomlDecodeError(TomlCombineError):
+    """Error while decoding configuration file."""
+
+
+class DuplicateError(TomlCombineError):
+    """In {type} {id}: Cannot have multiple {type}s with the same dimensions."""
+
+
+class DimensionNotFound(TomlCombineError):
+    """In {type} {id}: Dimension {dimension} not found."""
+
+
+class DimensionValueNotFound(TomlCombineError):
+    """In {type} {id}: Value {value} for dimension {dimension} not found."""
+
+
+class MissingOverrideCondition(TomlCombineError):
+    """In override {id}: Missing 'when' key in override configuration"""
