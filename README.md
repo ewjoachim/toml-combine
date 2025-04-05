@@ -1,9 +1,9 @@
 # Toml-combine
 
-`toml-combine` is a Python lib and CLI-tool that reads a toml configuration defining
-a default configuration and overrides with, and applies those overrides to get
-final configurations. Say: you have multiple services, and environments, and you
-want to describe them all without repeating the parts that are common to everyone.
+`toml-combine` is a Python lib and CLI-tool that reads a TOML configuration file
+defining a default configuration, overrides, and applies those overrides to get final
+configurations. Let's say: you have multiple services, and environments, and you want to
+describe them all without repeating the parts that are common to everyone.
 
 ## Concepts
 
@@ -36,7 +36,7 @@ service_account = "my-staging-service-account"
 ### Dimensions
 
 Consider all the configurations you want to generate. Each one differs from the others.
-Dimensions lets you describe the main "thing" that makes manifests differents, e.g.:
+Dimensions lets you describe the main "thing" that makes the outputs differents, e.g.:
 `environment` might be `staging` or `production`, region might be `eu` or `us`, and
 service might be `frontend` or `backend`. Some combinations of dimensions might not
 exists, for example, maybe there's no `staging` in `eu`.
