@@ -127,6 +127,41 @@ This example is simple because `name` is a natural choice for the key. In some c
 the choice is less natural, but you can always decide to name the elements of your
 list and use that name as a key. Also, yes, you'll loose ordering.
 
+### CLI
+
+```console
+$ toml-combine {path/to/config.toml}
+```
+
+Generates all the outputs described by the given TOML config.
+
+Note that you can restrict generation to some dimension values by passing
+`--{dimension}={value}`
+
+## Lib
+
+```python
+import toml_combine
+
+
+result = toml_combine.combine(
+        config_file=config_file,
+        environment=["production", "staging"],
+        type="job",
+        job=["manage", "special-command"],
+    )
+
+print(result)
+{
+  "production-job-manage": {...},
+  "production-job-special-command": {...},
+  "staging-job-manage": {...},
+  "staging-job-special-command": {...},
+}
+```
+
+You can pass either `config` (TOML string or dict) or `config_file` (`pathlib.Path` or string path) to `combine()`. Additional `kwargs` restrict the output.
+
 ### A bigger example
 
 ```toml
@@ -169,37 +204,83 @@ when.service = "backend"
 container.env.ENABLE_EXPENSIVE_MONITORING = false
 ```
 
-### CLI
+This produces the following configs:
 
-```console
-$ toml-combine {path/to/config.toml}
-```
-
-Generates all the outputs described by the given TOML config.
-
-Note that you can restrict generation to some dimension values by passing
-`--{dimension}={value}`
-
-## Lib
-
-```python
-import toml_combine
-
-
-result = toml_combine.combine(
-        config_file=config_file,
-        environment=["production", "staging"],
-        type="job",
-        job=["manage", "special-command"],
-    )
-
-print(result)
+```json
 {
-  "production-job-manage": {...},
-  "production-job-special-command": {...},
-  "staging-job-manage": {...},
-  "staging-job-special-command": {...},
+  "production-frontend-eu": {
+    "dimensions": {
+      "environment": "production",
+      "service": "frontend",
+      "region": "eu"
+    },
+    "registry": "gcr.io/my-project/",
+    "service_account": "my-service-account",
+    "name": "service-frontend",
+    "container": {
+      "image_name": "my-image-frontend"
+    }
+  },
+  "production-backend-eu": {
+    "dimensions": {
+      "environment": "production",
+      "service": "backend",
+      "region": "eu"
+    },
+    "registry": "gcr.io/my-project/",
+    "service_account": "my-service-account",
+    "name": "service-backend",
+    "container": {
+      "image_name": "my-image-backend",
+      "port": 8080
+    }
+  },
+  "staging-frontend-eu": {
+    "dimensions": {
+      "environment": "staging",
+      "service": "frontend",
+      "region": "eu"
+    },
+    "registry": "gcr.io/my-project/",
+    "service_account": "my-service-account",
+    "name": "service-frontend",
+    "container": {
+      "image_name": "my-image-frontend"
+    }
+  },
+  "staging-backend-eu": {
+    "dimensions": {
+      "environment": "staging",
+      "service": "backend",
+      "region": "eu"
+    },
+    "registry": "gcr.io/my-project/",
+    "service_account": "my-service-account",
+    "name": "service-backend",
+    "container": {
+      "image_name": "my-image-backend",
+      "port": 8080,
+      "env": {
+        "ENABLE_EXPENSIVE_MONITORING": false
+      }
+    }
+  },
+  "dev-backend": {
+    "dimensions": {
+      "environment": "dev",
+      "service": "backend"
+    },
+    "registry": "gcr.io/my-project/",
+    "service_account": "my-service-account",
+    "name": "service-backend",
+    "container": {
+      "env": {
+        "DEBUG": true,
+        "ENABLE_EXPENSIVE_MONITORING": false
+      },
+      "image_name": "my-image-backend",
+      "port": 8080
+    }
+  }
 }
 ```
-
-You can pass either `config` (TOML string or dict) or `config_file` (`pathlib.Path` or string path) to `combine()`. Additional `kwargs` restrict the output.

@@ -149,6 +149,46 @@ def test_generate_output(output: combiner.Output, expected: dict[str, int]):
     assert result == expected
 
 
+@pytest.mark.parametrize(
+    "output, override, expected",
+    [
+        (
+            combiner.Output(dimensions={"env": "dev"}),
+            combiner.Override(when={"env": ["dev"]}, config={}),
+            True,
+        ),
+        (
+            combiner.Output(dimensions={"env": "dev"}),
+            combiner.Override(when={"env": ["staging"]}, config={}),
+            False,
+        ),
+        (
+            combiner.Output(dimensions={"env": "dev"}),
+            combiner.Override(when={"env": ["dev", "staging"]}, config={}),
+            True,
+        ),
+        (
+            combiner.Output(dimensions={"env": "staging"}),
+            combiner.Override(when={"region": ["us"]}, config={}),
+            False,
+        ),
+        (
+            combiner.Output(dimensions={"env": "dev"}),
+            combiner.Override(when={"env": ["dev"], "region": ["us"]}, config={}),
+            False,
+        ),
+        (
+            combiner.Output(dimensions={"env": "dev", "region": "us"}),
+            combiner.Override(when={"env": ["dev"]}, config={}),
+            True,
+        ),
+    ],
+)
+def test_output_matches_override(output, override, expected):
+    result = combiner.output_matches_override(output=output, override=override)
+    assert result == expected
+
+
 def test_build_config():
     raw_config = """
     [dimensions]
@@ -195,7 +235,7 @@ def test_build_config():
                 config={"foo": "baz"},
             ),
             combiner.Override(
-                when={"env": "prod"},
+                when={"env": ["prod"]},
                 config={"foo": "qux"},
             ),
         ],

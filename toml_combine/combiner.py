@@ -5,7 +5,7 @@ import dataclasses
 import itertools
 from collections.abc import Mapping, Sequence
 from functools import partial
-from typing import Any
+from typing import Any, TypeVar
 
 from . import exceptions
 
@@ -24,7 +24,7 @@ class Output:
 
 @dataclasses.dataclass()
 class Override:
-    when: Mapping[str, str | list[str]]
+    when: Mapping[str, list[str]]
     config: Mapping[str, Any]
 
     def __str__(self) -> str:
@@ -48,9 +48,12 @@ def wrap_in_list(value: str | list[str]) -> list[str]:
     return value
 
 
+T = TypeVar("T", bound=str | list[str])
+
+
 def clean_dimensions_dict(
-    to_sort: Mapping[str, str | list[str]], clean: dict[str, list[str]], type: str
-) -> dict[str, str]:
+    to_sort: Mapping[str, T], clean: dict[str, list[str]], type: str
+) -> dict[str, T]:
     """
     Recreate a dictionary of dimension values with the same order as the
     dimensions list.
@@ -148,7 +151,9 @@ def build_config(config: dict[str, Any]) -> Config:
         except KeyError:
             raise exceptions.MissingOverrideCondition(id=override)
 
-        conditions = tuple((k, tuple(wrap_in_list(v))) for k, v in when.items())
+        when = {k: wrap_in_list(v) for k, v in when.items()}
+
+        conditions = tuple((k, tuple(v)) for k, v in when.items())
         if conditions in seen_conditions:
             raise exceptions.DuplicateError(type="override", id=when)
 
@@ -176,7 +181,6 @@ def build_config(config: dict[str, Any]) -> Config:
             output[key] = wrap_in_list(output[key])
 
         for cartesian_product in itertools.product(*output.values()):
-            # Create a dictionary with the same keys as when
             single_output = dict(zip(output.keys(), cartesian_product))
 
             conditions = tuple(single_output.items())
@@ -200,6 +204,20 @@ def build_config(config: dict[str, Any]) -> Config:
     )
 
 
+def output_matches_override(output: Output, override: Override) -> bool:
+    """
+    Check if the values in the override match the output dimensions.
+    """
+    for dim, values in override.when.items():
+        if dim not in output.dimensions:
+            return False
+
+        if output.dimensions[dim] not in values:
+            return False
+
+    return True
+
+
 def generate_output(
     default: Mapping[str, Any], overrides: Sequence[Override], output: Output
 ) -> dict[str, Any]:
@@ -207,10 +225,8 @@ def generate_output(
     # Apply each matching override
     for override in overrides:
         # Check if all dimension values in the override match
-        if all(
-            override.when.get(dim) == output.dimensions.get(dim)
-            for dim in override.when.keys()
-        ):
+
+        if output_matches_override(output=output, override=override):
             result = merge_configs(result, override.config)
 
     return {"dimensions": output.dimensions, **result}

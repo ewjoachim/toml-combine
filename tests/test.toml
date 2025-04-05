@@ -6,62 +6,21 @@ service = ["api", "admin"]
 job = ["manage", "special-command"]
 
 [[output]]
-environment = "staging"
+environment = ["staging", "production"]
 stack = "next"
 type = "service"
 
 [[output]]
-environment = "staging"
+environment = ["staging", "production"]
 stack = "django"
 type = "service"
-service = "api"
+service = ["api", "admin"]
 
 [[output]]
-environment = "staging"
-stack = "django"
-type = "service"
-service = "admin"
-
-[[output]]
-environment = "staging"
+environment = ["staging", "production"]
 stack = "django"
 type = "job"
-job = "manage"
-
-[[output]]
-environment = "staging"
-stack = "django"
-type = "job"
-job = "special-command"
-
-[[output]]
-environment = "production"
-stack = "next"
-type = "service"
-
-[[output]]
-environment = "production"
-stack = "django"
-type = "service"
-service = "api"
-
-[[output]]
-environment = "production"
-stack = "django"
-type = "service"
-service = "admin"
-
-[[output]]
-environment = "production"
-stack = "django"
-type = "job"
-job = "manage"
-
-[[output]]
-environment = "production"
-stack = "django"
-type = "job"
-job = "special-command"
+job = ["manage", "special-command"]
 
 [default]
 registry.region = "us"
@@ -107,7 +66,9 @@ cloudsql_instance = "staging-postgres"
 containers.app.env.APP_FOO = "qux"
 
 [[override]]
-when.service = "admin"
+# The following line defines when in an array. It's not useful, as there's only one
+# value,  but we want to test that arrays work too.
+when.service = ["admin"]
 containers.app.name = "admin"
 containers.app.env.APP_ADMIN_ENABLED = true
 containers.app.env.APP_ID = 1234
