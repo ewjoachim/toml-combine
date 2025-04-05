@@ -1,9 +1,10 @@
 # Toml-combine
 
 `toml-combine` is a Python lib and CLI-tool that reads a TOML configuration file
-defining a default configuration, overrides, and applies those overrides to get final
-configurations. Let's say: you have multiple services, and environments, and you want to
-describe them all without repeating the parts that are common to everyone.
+defining a default configuration alongside with overrides, and merges everything
+following rules you define to get final configurations. Let's say: you have multiple
+services, and environments, and you want to describe them all without repeating the
+parts that are common to everyone.
 
 ## Concepts
 
