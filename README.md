@@ -189,4 +189,12 @@ result = toml_combine.combine(
     )
 
 print(result)
+{
+  "production-job-manage": {...},
+  "production-job-special-command": {...},
+  "staging-job-manage": {...},
+  "staging-job-special-command": {...},
+}
 ```
+
+You can pass either `config` (TOML string or dict) or `config_file` (`pathlib.Path` or string path) to `combine()`. Additional `kwargs` restrict the output.
