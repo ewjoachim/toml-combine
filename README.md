@@ -162,7 +162,7 @@ print(result)
 
 You can pass either `config` (TOML string or dict) or `config_file` (`pathlib.Path` or string path) to `combine()`. Additional `kwargs` restrict the output.
 
-### A bigger example
+## A bigger example
 
 ```toml
 [dimensions]
