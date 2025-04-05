@@ -162,6 +162,11 @@ container.port = 8080
 name = "service-dev"
 when.environment = "dev"
 container.env.DEBUG = true
+
+[[override]]
+when.environment = ["staging", "dev"]
+when.service = "backend"
+container.env.ENABLE_EXPENSIVE_MONITORING = false
 ```
 
 ### CLI
