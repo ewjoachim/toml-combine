@@ -5,7 +5,7 @@ import dataclasses
 import itertools
 from collections.abc import Mapping, Sequence
 from functools import partial
-from typing import Any, TypeVar
+from typing import Any, TypeVar, Union
 
 from . import exceptions
 
@@ -48,7 +48,7 @@ def wrap_in_list(value: str | list[str]) -> list[str]:
     return value
 
 
-T = TypeVar("T", bound=str | list[str])
+T = TypeVar("T", bound=Union[str, list[str]])
 
 
 def clean_dimensions_dict(

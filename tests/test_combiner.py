@@ -118,7 +118,7 @@ def test_generate_output(output: combiner.Output, expected: dict[str, int]):
 
     overrides = [
         combiner.Override(
-            when={"env": "prod"},
+            when={"env": ["prod"]},
             config={
                 "a": 10,
                 "c": 30,
@@ -127,7 +127,7 @@ def test_generate_output(output: combiner.Output, expected: dict[str, int]):
             },
         ),
         combiner.Override(
-            when={"env": "staging"},
+            when={"env": ["staging"]},
             config={
                 "b": 200,
                 "c": 300,
@@ -136,7 +136,7 @@ def test_generate_output(output: combiner.Output, expected: dict[str, int]):
             },
         ),
         combiner.Override(
-            when={"env": "staging", "region": "us"},
+            when={"env": ["staging"], "region": ["us"]},
             config={"f": 5000, "g": 6000},
         ),
     ]
