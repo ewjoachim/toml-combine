@@ -5,23 +5,6 @@ stack = ["next", "django"]
 service = ["api", "admin"]
 job = ["manage", "special-command"]
 
-[[output]]
-environment = ["staging", "production"]
-stack = "next"
-type = "service"
-
-[[output]]
-environment = ["staging", "production"]
-stack = "django"
-type = "service"
-service = ["api", "admin"]
-
-[[output]]
-environment = ["staging", "production"]
-stack = "django"
-type = "job"
-job = ["manage", "special-command"]
-
 [default]
 registry.region = "us"
 

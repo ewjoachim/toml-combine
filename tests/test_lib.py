@@ -25,41 +25,91 @@ def expected():
         {"config": toml.loads(config_file.read_text())},
     ],
 )
-def test_full(kwargs, expected):
-    result = toml_combine.combine(**kwargs)
-    assert set(result) == set(expected)
-    for key in result:
-        assert result[key] == expected[key], f"Failed for {key}"
-
-
-# environment = ["staging", "production"]
-# type = ["service", "job"]
-# stack = ["next", "django"]
-# service = ["api", "admin"]
-# job = ["manage", "special-command"]
-
-
-def test_filter__str(expected):
-    result = toml_combine.combine(
-        config_file=config_file, environment="production", stack="next"
-    )
-    assert result == {"production-service-next": expected["production-service-next"]}
-
-
-def test_filter__list(expected):
-    result = toml_combine.combine(
-        config_file=config_file,
-        environment=["production", "staging"],
-        type="job",
-        job=["manage", "special-command"],
-    )
-    assert result == {
-        "staging-job-django-manage": expected["staging-job-django-manage"],
-        "staging-job-django-special-command": expected[
-            "staging-job-django-special-command"
-        ],
-        "production-job-django-manage": expected["production-job-django-manage"],
-        "production-job-django-special-command": expected[
-            "production-job-django-special-command"
-        ],
-    }
+@pytest.mark.parametrize(
+    "mapping, expected_key",
+    [
+        (
+            {"environment": "staging", "type": "service", "stack": "next"},
+            "staging-service-next",
+        ),
+        (
+            {
+                "environment": "staging",
+                "type": "service",
+                "stack": "django",
+                "service": "api",
+            },
+            "staging-service-django-api",
+        ),
+        (
+            {
+                "environment": "staging",
+                "type": "service",
+                "stack": "django",
+                "service": "admin",
+            },
+            "staging-service-django-admin",
+        ),
+        (
+            {
+                "environment": "staging",
+                "type": "job",
+                "stack": "django",
+                "job": "manage",
+            },
+            "staging-job-django-manage",
+        ),
+        (
+            {
+                "environment": "staging",
+                "type": "job",
+                "stack": "django",
+                "job": "special-command",
+            },
+            "staging-job-django-special-command",
+        ),
+        (
+            {"environment": "production", "type": "service", "stack": "next"},
+            "production-service-next",
+        ),
+        (
+            {
+                "environment": "production",
+                "type": "service",
+                "stack": "django",
+                "service": "api",
+            },
+            "production-service-django-api",
+        ),
+        (
+            {
+                "environment": "production",
+                "type": "service",
+                "stack": "django",
+                "service": "admin",
+            },
+            "production-service-django-admin",
+        ),
+        (
+            {
+                "environment": "production",
+                "type": "job",
+                "stack": "django",
+                "job": "manage",
+            },
+            "production-job-django-manage",
+        ),
+        (
+            {
+                "environment": "production",
+                "type": "job",
+                "stack": "django",
+                "job": "special-command",
+            },
+            "production-job-django-special-command",
+        ),
+    ],
+)
+def test_full(kwargs, mapping, expected, expected_key):
+    result = toml_combine.combine(**kwargs, **mapping)
+    assert result == expected[expected_key]

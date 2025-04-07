@@ -2,24 +2,11 @@ from __future__ import annotations
 
 import copy
 import dataclasses
-import itertools
 from collections.abc import Mapping, Sequence
 from functools import partial
-from typing import Any, TypeVar, Union
+from typing import Any
 
 from . import exceptions
-
-
-@dataclasses.dataclass()
-class Output:
-    dimensions: Mapping[str, str]
-
-    @property
-    def id(self) -> str:
-        return f"{'-'.join(self.dimensions.values())}"
-
-    def __str__(self) -> str:
-        return f"Output(id={self.id})"
 
 
 @dataclasses.dataclass()
@@ -34,55 +21,40 @@ class Override:
 @dataclasses.dataclass()
 class Config:
     dimensions: Mapping[str, list[str]]
-    outputs: list[Output]
     default: Mapping[str, Any]
     overrides: Sequence[Override]
 
 
-def wrap_in_list(value: str | list[str]) -> list[str]:
-    """
-    Wrap a string in a list if it's not already a list.
-    """
-    if isinstance(value, str):
-        return [value]
-    return value
-
-
-T = TypeVar("T", bound=Union[str, list[str]])
-
-
 def clean_dimensions_dict(
-    to_sort: Mapping[str, T], clean: dict[str, list[str]], type: str
-) -> dict[str, T]:
+    to_sort: Mapping[str, list[str]], clean: dict[str, list[str]], type: str
+) -> dict[str, list[str]]:
     """
     Recreate a dictionary of dimension values with the same order as the
     dimensions list.
     """
     result = {}
-    remaining = dict(to_sort)
+    if invalid_dimensions := set(to_sort) - set(clean):
+        raise exceptions.DimensionNotFound(
+            type=type,
+            id=to_sort,
+            dimension=", ".join(invalid_dimensions),
+        )
 
+    # Fix the order of the dimensions
     for dimension, valid_values in clean.items():
-        valid_values = set(valid_values)
         if dimension not in to_sort:
             continue
 
-        original_value = remaining.pop(dimension)
-        values = set(wrap_in_list(original_value))
-        if invalid_values := values - valid_values:
+        original_values = to_sort[dimension]
+        if invalid_values := set(original_values) - set(valid_values):
             raise exceptions.DimensionValueNotFound(
                 type=type,
                 id=to_sort,
                 dimension=dimension,
                 value=", ".join(invalid_values),
             )
-        result[dimension] = original_value
-
-    if remaining:
-        raise exceptions.DimensionNotFound(
-            type=type,
-            id=to_sort,
-            dimension=", ".join(to_sort),
-        )
+        # Fix the order of the values
+        result[dimension] = [e for e in valid_values if e in original_values]
 
     return result
 
@@ -137,6 +109,7 @@ def merge_configs(a: Any, b: Any, /) -> Any:
 
 
 def build_config(config: dict[str, Any]) -> Config:
+    config = copy.deepcopy(config)
     # Parse dimensions
     dimensions = config.pop("dimensions")
 
@@ -150,8 +123,11 @@ def build_config(config: dict[str, Any]) -> Config:
             when = override.pop("when")
         except KeyError:
             raise exceptions.MissingOverrideCondition(id=override)
-
-        when = {k: wrap_in_list(v) for k, v in when.items()}
+        when = clean_dimensions_dict(
+            to_sort={k: v if isinstance(v, list) else [v] for k, v in when.items()},
+            clean=dimensions,
+            type="override",
+        )
 
         conditions = tuple((k, tuple(v)) for k, v in when.items())
         if conditions in seen_conditions:
@@ -173,93 +149,38 @@ def build_config(config: dict[str, Any]) -> Config:
         key=partial(override_sort_key, dimensions=dimensions),
     )
 
-    outputs = []
-    seen_conditions = set()
-
-    for output in config.pop("output", []):
-        for key in output:
-            output[key] = wrap_in_list(output[key])
-
-        for cartesian_product in itertools.product(*output.values()):
-            single_output = dict(zip(output.keys(), cartesian_product))
-
-            conditions = tuple(single_output.items())
-            if conditions in seen_conditions:
-                raise exceptions.DuplicateError(type="output", id=output.id)
-            seen_conditions.add(conditions)
-
-            outputs.append(
-                Output(
-                    dimensions=clean_dimensions_dict(
-                        single_output, dimensions, type="output"
-                    ),
-                )
-            )
-
     return Config(
         dimensions=dimensions,
-        outputs=outputs,
         default=default,
         overrides=overrides,
     )
 
 
-def output_matches_override(output: Output, override: Override) -> bool:
+def mapping_matches_override(mapping: dict[str, str], override: Override) -> bool:
     """
-    Check if the values in the override match the output dimensions.
+    Check if the values in the override match the given dimensions.
     """
     for dim, values in override.when.items():
-        if dim not in output.dimensions:
+        if dim not in mapping:
             return False
 
-        if output.dimensions[dim] not in values:
+        if mapping[dim] not in values:
             return False
 
     return True
 
 
-def generate_output(
-    default: Mapping[str, Any], overrides: Sequence[Override], output: Output
+def generate_for_mapping(
+    default: Mapping[str, Any],
+    overrides: Sequence[Override],
+    mapping: dict[str, str],
 ) -> dict[str, Any]:
     result = copy.deepcopy(default)
     # Apply each matching override
     for override in overrides:
         # Check if all dimension values in the override match
 
-        if output_matches_override(output=output, override=override):
+        if mapping_matches_override(mapping=mapping, override=override):
             result = merge_configs(result, override.config)
 
-    return {"dimensions": output.dimensions, **result}
-
-
-def generate_outputs(config: Config, **filter: str | list[str]) -> dict[str, Any]:
-    result = {}
-    filter_with_lists: dict[str, list[str]] = {}
-
-    for key, value in list(filter.items()):
-        if key not in config.dimensions:
-            raise exceptions.DimensionNotFound(type="arguments", id="", dimension=key)
-
-        value = wrap_in_list(value)
-
-        if set(value) - set(config.dimensions[key]):
-            raise exceptions.DimensionValueNotFound(
-                type="arguments",
-                id="",
-                dimension=key,
-                value=", ".join(set(value) - set(config.dimensions[key])),
-            )
-        filter_with_lists[key] = value
-
-    for output in config.outputs:
-        if all(
-            output.dimensions.get(key) in value
-            for key, value in filter_with_lists.items()
-        ):
-            result[output.id] = generate_output(
-                default=config.default,
-                overrides=config.overrides,
-                output=output,
-            )
-
-    return result
+    return {"dimensions": mapping, **result}
