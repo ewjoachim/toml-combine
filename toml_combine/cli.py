@@ -6,8 +6,6 @@ import pathlib
 import sys
 from collections.abc import Mapping
 
-import tomlkit
-
 from . import combiner, exceptions, lib, toml
 
 
