@@ -6,7 +6,7 @@ import pathlib
 import sys
 from collections.abc import Mapping
 
-from . import combiner, exceptions, toml
+from . import combiner, exceptions, lib, toml
 
 
 def get_argument_parser(
@@ -18,19 +18,29 @@ def get_argument_parser(
         add_help=(dimensions is not None),
     )
     arg_parser.add_argument(
+        "--format",
+        choices=["json", "toml"],
+        default="toml",
+        help="Output format",
+    )
+    arg_parser.add_argument(
         "config",
         type=pathlib.Path,
         help="Path to the TOML configuration file",
     )
-    if dimensions:
+    if dimensions is None:
+        arg_parser.epilog = (
+            "Additional arguments will be provided with a valid config file."
+        )
+    else:
         group = arg_parser.add_argument_group(
             "dimensions",
-            "Filter the generated outputs by dimensions",
+            "Output the file with these dimensions",
         )
 
         for name, values in dimensions.items():
             group.add_argument(
-                f"--{name}", choices=values, help=f"Limit to given {name}"
+                f"--{name}", choices=values, help=f"Provide value for {name}"
             )
 
     return arg_parser
@@ -41,7 +51,12 @@ def cli(argv) -> int:
 
     # Parse the config file argument to get the dimensions
     arg_parser = get_argument_parser(dimensions=None)
-    args, _ = arg_parser.parse_known_args(argv)
+    try:
+        args, _ = arg_parser.parse_known_args(argv)
+    except SystemExit:
+        # If the user didn't provide a config file, print the help message
+        arg_parser.print_help()
+        return 1
 
     try:
         dict_config = toml.loads(args.config.read_text())
@@ -62,22 +77,25 @@ def cli(argv) -> int:
     arg_parser = get_argument_parser(dimensions=config.dimensions)
     args = arg_parser.parse_args(argv)
 
-    dimensions_filter = {
+    mapping = {
         key: value
         for key, value in vars(args).items()
         if key in config.dimensions and value
     }
-    # Generate final configurations for each output
+    # Generate final configurations for requested mapping
     try:
-        result = combiner.generate_outputs(config=config, **dimensions_filter)
+        result = lib.combine(config=dict_config, **mapping)
     except exceptions.TomlCombineError as exc:
         print(exc, file=sys.stderr)
         return 1
 
-    if not result:
-        print("No outputs found", file=sys.stderr)
+    if args.format == "toml":
+        # Convert the result to TOML format
 
-    print(json.dumps(result, indent=2))
+        print(toml.dumps(result))
+    else:
+        # Convert the result to JSON format
+        print(json.dumps(result, indent=2))
 
     return 0
 

@@ -16,12 +16,6 @@ The configuration file is usually a TOML file. Here's a small example:
 [dimensions]
 environment = ["production", "staging"]
 
-[[output]]
-environment = "production"
-
-[[output]]
-environment = "staging"
-
 [default]
 name = "my-service"
 registry = "gcr.io/my-project/"
@@ -41,16 +35,6 @@ Dimensions lets you describe the main "thing" that makes the outputs differents,
 `environment` might be `staging` or `production`, region might be `eu` or `us`, and
 service might be `frontend` or `backend`. Some combinations of dimensions might not
 exists, for example, maybe there's no `staging` in `eu`.
-
-### Outputs
-
-Create a `output` for each configuration you want to generate, and specify the
-dimensions relevant for this output. It's ok to omit some dimensions when they're not
-used for a given output.
-
-> [!Note]
-> Defining a list as the value of one or more dimensions in a output
-> is a shorthand for defining all combinations of dimensions
 
 ### Default
 
@@ -74,7 +58,7 @@ specific to more specific, each one overriding the values of the previous ones:
 
 ### The configuration itself
 
-Under the layer of `dimensions/output/default/override` system, what you actually define
+Under the layer of `dimensions/default/override/mapping` system, what you actually define
 in the configuration is completely up to you. That said, only nested
 "dictionnaries"/"objects"/"tables"/"mapping" (those are all the same things in
 Python/JS/Toml lingo) will be merged between the default and the overrides, while
@@ -91,9 +75,6 @@ Let's look at an example:
 [dimensions]
 environment = ["production", "staging"]
 
-[[output]]
-environment = ["production", "staging"]
-
 [default]
 fruits = [{name="apple", color="red"}]
 
@@ -102,15 +83,14 @@ when.environment = "staging"
 fruits = [{name="orange", color="orange"}]
 ```
 
-In this example, on staging, `fruits` is `[{name="orange", color="orange"}]` and not `[{name="apple", color="red"}, {name="orange", color="orange"}]`.
-The only way to get multiple values to be merged is if they are tables: you'll need
+In this example, with `{"environment": "staging"}`, `fruits` is
+`[{name="orange", color="orange"}]` and not
+`[{name="apple", color="red"}, {name="orange", color="orange"}]`.
+The only way to get multiple values to be merged is if they are dicts: you'll need
 to chose an element to become the key:
 
 ```toml
 [dimensions]
-environment = ["production", "staging"]
-
-[[output]]
 environment = ["production", "staging"]
 
 [default]
@@ -127,16 +107,29 @@ This example is simple because `name` is a natural choice for the key. In some c
 the choice is less natural, but you can always decide to name the elements of your
 list and use that name as a key. Also, yes, you'll loose ordering.
 
-### CLI
+### Mapping
+
+When you call the tool either with the CLI or the lib (see both below), you will have to
+provide a mapping of the desired dimentions. These values will be compared to overrides
+to apply overrides when relevant. It's ok to omit some dimensions, corresponding
+overrides won't be selected. The mapping you pass is also returned in the output as a
+dict under the `dimensions` key.
+
+By default, the output is `toml` though you can switch to `json` with `--format=json`
+
+## CLI
+
+Example with the config from the previous section:
 
 ```console
-$ toml-combine {path/to/config.toml}
+$ toml-combine path/to/config.toml --environment=staging
+[dimensions]
+environment = "staging"
+
+[fruits]
+apple.color = "red"
+orange.color = "orange"
 ```
-
-Generates all the outputs described by the given TOML config.
-
-Note that you can restrict generation to some dimension values by passing
-`--{dimension}={value}`
 
 ## Lib
 
@@ -144,23 +137,16 @@ Note that you can restrict generation to some dimension values by passing
 import toml_combine
 
 
-result = toml_combine.combine(
-        config_file=config_file,
-        environment=["production", "staging"],
-        type="job",
-        job=["manage", "special-command"],
-    )
+result = toml_combine.combine(config_file=config_file, environment="staging")
 
 print(result)
 {
-  "production-job-manage": {...},
-  "production-job-special-command": {...},
-  "staging-job-manage": {...},
-  "staging-job-special-command": {...},
+  "dimensions": {"environment": "staging"},
+  "fruits": {"apple": {"color": "red"}, "orange": {"color": "orange"}}
 }
 ```
 
-You can pass either `config` (TOML string or dict) or `config_file` (`pathlib.Path` or string path) to `combine()`. Additional `kwargs` restrict the output.
+You can pass either `config` (TOML string or dict) or `config_file` (`pathlib.Path` or string path) to `combine()`. All other `kwargs` specify the mapping you want.
 
 ## A bigger example
 
@@ -168,15 +154,6 @@ You can pass either `config` (TOML string or dict) or `config_file` (`pathlib.Pa
 [dimensions]
 environment = ["production", "staging", "dev"]
 service = ["frontend", "backend"]
-
-# All 4 combinations of those values will exist
-[[output]]
-environment = ["production", "staging"]
-service = ["frontend", "backend"]
-
-# On dev, the "service" is not defined. That's ok.
-[[output]]
-environment = "dev"
 
 [default]
 registry = "gcr.io/my-project/"
@@ -206,81 +183,77 @@ container.env.ENABLE_EXPENSIVE_MONITORING = false
 
 This produces the following configs:
 
-```json
-{
-  "production-frontend-eu": {
-    "dimensions": {
-      "environment": "production",
-      "service": "frontend",
-      "region": "eu"
-    },
-    "registry": "gcr.io/my-project/",
-    "service_account": "my-service-account",
-    "name": "service-frontend",
-    "container": {
-      "image_name": "my-image-frontend"
-    }
-  },
-  "production-backend-eu": {
-    "dimensions": {
-      "environment": "production",
-      "service": "backend",
-      "region": "eu"
-    },
-    "registry": "gcr.io/my-project/",
-    "service_account": "my-service-account",
-    "name": "service-backend",
-    "container": {
-      "image_name": "my-image-backend",
-      "port": 8080
-    }
-  },
-  "staging-frontend-eu": {
-    "dimensions": {
-      "environment": "staging",
-      "service": "frontend",
-      "region": "eu"
-    },
-    "registry": "gcr.io/my-project/",
-    "service_account": "my-service-account",
-    "name": "service-frontend",
-    "container": {
-      "image_name": "my-image-frontend"
-    }
-  },
-  "staging-backend-eu": {
-    "dimensions": {
-      "environment": "staging",
-      "service": "backend",
-      "region": "eu"
-    },
-    "registry": "gcr.io/my-project/",
-    "service_account": "my-service-account",
-    "name": "service-backend",
-    "container": {
-      "image_name": "my-image-backend",
-      "port": 8080,
-      "env": {
-        "ENABLE_EXPENSIVE_MONITORING": false
-      }
-    }
-  },
-  "dev-backend": {
-    "dimensions": {
-      "environment": "dev",
-      "service": "backend"
-    },
-    "registry": "gcr.io/my-project/",
-    "service_account": "my-service-account",
-    "name": "service-backend",
-    "container": {
-      "env": {
-        "DEBUG": true,
-        "ENABLE_EXPENSIVE_MONITORING": false
-      },
-      "image_name": "my-image-backend",
-      "port": 8080
-    }
-  }
-}
+```console
+$ uv run toml-combine example.toml --environment=production --service=frontend
+registry = "gcr.io/my-project/"
+service_account = "my-service-account"
+name = "service-frontend"
+[dimensions]
+environment = "production"
+service = "frontend"
+
+[container]
+image_name = "my-image-frontend"
+```
+
+```console
+$ toml-combine example.toml --environment=production --service=backend
+registry = "gcr.io/my-project/"
+service_account = "my-service-account"
+name = "service-backend"
+[dimensions]
+environment = "production"
+service = "backend"
+
+[container]
+image_name = "my-image-backend"
+port = 8080
+```
+
+```console
+$ toml-combine example.toml --environment=staging --service=frontend
+registry = "gcr.io/my-project/"
+service_account = "my-service-account"
+name = "service-frontend"
+[dimensions]
+environment = "staging"
+service = "frontend"
+
+[container]
+image_name = "my-image-frontend"
+```
+
+```console
+$ toml-combine example.toml --environment=staging --service=backend
+registry = "gcr.io/my-project/"
+service_account = "my-service-account"
+name = "service-backend"
+[dimensions]
+environment = "staging"
+service = "backend"
+
+[container]
+image_name = "my-image-backend"
+port = 8080
+
+[container.env]
+ENABLE_EXPENSIVE_MONITORING = false
+```
+
+```console
+$ toml-combine example.toml --environment=dev --service=backend
+registry = "gcr.io/my-project/"
+service_account = "my-service-account"
+name = "service-backend"
+[dimensions]
+environment = "dev"
+service = "backend"
+
+[container]
+image_name = "my-image-backend"
+port = 8080
+[container.env]
+DEBUG = true
+ENABLE_EXPENSIVE_MONITORING = false
+
 ```

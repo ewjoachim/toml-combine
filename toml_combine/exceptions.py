@@ -15,6 +15,10 @@ class TomlDecodeError(TomlCombineError):
     """Error while decoding configuration file."""
 
 
+class TomlEncodeError(TomlCombineError):
+    """Error while encoding configuration file."""
+
+
 class DuplicateError(TomlCombineError):
     """In {type} {id}: Cannot have multiple {type}s with the same dimensions."""
 

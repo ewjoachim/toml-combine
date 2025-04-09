@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import pytest
-import tomli
 
-from toml_combine import combiner, exceptions
+from toml_combine import combiner, exceptions, toml
 
 
 @pytest.mark.parametrize(
@@ -66,10 +65,10 @@ def test_merge_configs__dicts_error():
 
 
 @pytest.mark.parametrize(
-    "output, expected",
+    "mapping, expected",
     [
         pytest.param(
-            combiner.Output(dimensions={"env": "dev"}),
+            {"env": "dev"},
             {
                 "a": 1,
                 "b": 2,
@@ -81,7 +80,7 @@ def test_merge_configs__dicts_error():
             id="no_matches",
         ),
         pytest.param(
-            combiner.Output(dimensions={"env": "prod"}),
+            {"env": "prod"},
             {
                 "a": 10,
                 "b": 2,
@@ -93,7 +92,7 @@ def test_merge_configs__dicts_error():
             id="single_match",
         ),
         pytest.param(
-            combiner.Output(dimensions={"env": "staging"}),
+            {"env": "staging"},
             {
                 "a": 1,
                 "b": 200,
@@ -107,7 +106,7 @@ def test_merge_configs__dicts_error():
         ),
     ],
 )
-def test_generate_output(output: combiner.Output, expected: dict[str, int]):
+def test_generate_for_mapping(mapping: dict, expected: dict[str, int]):
     default = {
         "a": 1,
         "b": 2,
@@ -141,51 +140,51 @@ def test_generate_output(output: combiner.Output, expected: dict[str, int]):
         ),
     ]
 
-    result = combiner.generate_output(
-        output=output,
+    result = combiner.generate_for_mapping(
         default=default,
         overrides=overrides,
+        mapping=mapping,
     )
     assert result == expected
 
 
 @pytest.mark.parametrize(
-    "output, override, expected",
+    "mapping, override, expected",
     [
         (
-            combiner.Output(dimensions={"env": "dev"}),
+            {"env": "dev"},
             combiner.Override(when={"env": ["dev"]}, config={}),
             True,
         ),
         (
-            combiner.Output(dimensions={"env": "dev"}),
+            {"env": "dev"},
             combiner.Override(when={"env": ["staging"]}, config={}),
             False,
         ),
         (
-            combiner.Output(dimensions={"env": "dev"}),
+            {"env": "dev"},
             combiner.Override(when={"env": ["dev", "staging"]}, config={}),
             True,
         ),
         (
-            combiner.Output(dimensions={"env": "staging"}),
+            {"env": "staging"},
             combiner.Override(when={"region": ["us"]}, config={}),
             False,
         ),
         (
-            combiner.Output(dimensions={"env": "dev"}),
+            {"env": "dev"},
             combiner.Override(when={"env": ["dev"], "region": ["us"]}, config={}),
             False,
         ),
         (
-            combiner.Output(dimensions={"env": "dev", "region": "us"}),
+            {"env": "dev", "region": "us"},
             combiner.Override(when={"env": ["dev"]}, config={}),
             True,
         ),
     ],
 )
-def test_output_matches_override(output, override, expected):
-    result = combiner.output_matches_override(output=output, override=override)
+def test_mapping_matches_override(mapping, override, expected):
+    result = combiner.mapping_matches_override(mapping=mapping, override=override)
     assert result == expected
 
 
@@ -197,12 +196,6 @@ def test_build_config():
     [default]
     foo = "bar"
 
-    [[output]]
-    env = "dev"
-
-    [[output]]
-    env = ["staging", "prod"]
-
     [[override]]
     when.env = ["dev", "staging"]
     foo = "baz"
@@ -212,22 +205,11 @@ def test_build_config():
     foo = "qux"
     """
 
-    config_dict = tomli.loads(raw_config)
+    config_dict = toml.loads(raw_config)
     config = combiner.build_config(config_dict)
 
     assert config == combiner.Config(
         dimensions={"env": ["dev", "staging", "prod"]},
-        outputs=[
-            combiner.Output(
-                dimensions={"env": "dev"},
-            ),
-            combiner.Output(
-                dimensions={"env": "staging"},
-            ),
-            combiner.Output(
-                dimensions={"env": "prod"},
-            ),
-        ],
         default={"foo": "bar"},
         overrides=[
             combiner.Override(
@@ -242,16 +224,13 @@ def test_build_config():
     )
 
 
-def test_create_outputs__duplicate_overrides():
+def test_build_config__duplicate_overrides():
     raw_config = """
     [dimensions]
     env = ["dev", "prod"]
 
     [templates]
     foo = "bar"
-
-    [[output]]
-    env = "dev"
 
     [[override]]
     when.env = "prod"
@@ -262,117 +241,49 @@ def test_create_outputs__duplicate_overrides():
     foo = "qux"
     """
 
-    config = tomli.loads(raw_config)
+    config = toml.loads(raw_config)
     with pytest.raises(exceptions.DuplicateError):
         combiner.build_config(config)
 
 
-def test_create_outputs__dimension_not_found_in_output():
+def test_build_config__dimension_not_found_in_override():
     raw_config = """
     [dimensions]
     env = ["dev", "prod"]
-
-    [[output]]
-    region = "us"
-    """
-
-    config = tomli.loads(raw_config)
-    with pytest.raises(exceptions.DimensionNotFound):
-        combiner.build_config(config)
-
-
-def test_create_outputs__dimension_value_not_found_in_output():
-    raw_config = """
-    [dimensions]
-    env = ["dev", "prod"]
-
-    [[output]]
-    env = "staging"
-    """
-
-    config = tomli.loads(raw_config)
-    with pytest.raises(exceptions.DimensionValueNotFound):
-        combiner.build_config(config)
-
-
-def test_create_outputs__dimension_not_found_in_override():
-    raw_config = """
-    [dimensions]
-    env = ["dev", "prod"]
-
-    [[output]]
-    env = "dev"
 
     [[override]]
     when.region = "eu"
     """
 
-    config = tomli.loads(raw_config)
+    config = toml.loads(raw_config)
     with pytest.raises(exceptions.DimensionNotFound):
         combiner.build_config(config)
 
 
-def test_create_outputs__dimension_value_not_found_in_override():
+def test_build_config__dimension_value_not_found_in_override():
     raw_config = """
     [dimensions]
     env = ["dev", "prod"]
-
-    [[output]]
-    env = "dev"
 
     [[override]]
     when.env = "staging"
     """
 
-    config = tomli.loads(raw_config)
+    config = toml.loads(raw_config)
     with pytest.raises(exceptions.DimensionValueNotFound):
         combiner.build_config(config)
-
-
-def test_output_id():
-    output = combiner.Output(dimensions={"env": "dev", "region": "us"}).id
-    assert output == "dev-us"
 
 
 @pytest.fixture
 def config():
     return combiner.build_config(
-        tomli.loads(
+        toml.loads(
             """
         [dimensions]
         env = ["dev", "prod"]
 
         [default]
         foo = "bar"
-
-        [[output]]
-        env = "dev"
         """,
         )
     )
-
-
-def test_generate_outputs(config):
-    # Generate final configurations for each output
-    assert combiner.generate_outputs(config=config) == {
-        "dev": {
-            "foo": "bar",
-            "dimensions": {"env": "dev"},
-        }
-    }
-
-
-def test_generate_outputs__filter_wrong_dimension(config):
-    with pytest.raises(exceptions.DimensionNotFound):
-        combiner.generate_outputs(
-            config=config,
-            foo="bar",
-        )
-
-
-def test_generate_outputs__filter_wrong_dimension_value(config):
-    with pytest.raises(exceptions.DimensionValueNotFound):
-        combiner.generate_outputs(
-            config=config,
-            env="foo",
-        )
