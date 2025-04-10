@@ -112,8 +112,7 @@ list and use that name as a key. Also, yes, you'll loose ordering.
 When you call the tool either with the CLI or the lib (see both below), you will have to
 provide a mapping of the desired dimentions. These values will be compared to overrides
 to apply overrides when relevant. It's ok to omit some dimensions, corresponding
-overrides won't be selected. The mapping you pass is also returned in the output as a
-dict under the `dimensions` key.
+overrides won't be selected.
 
 By default, the output is `toml` though you can switch to `json` with `--format=json`
 
@@ -141,7 +140,6 @@ result = toml_combine.combine(config_file=config_file, environment="staging")
 
 print(result)
 {
-  "dimensions": {"environment": "staging"},
   "fruits": {"apple": {"color": "red"}, "orange": {"color": "orange"}}
 }
 ```
@@ -188,9 +186,6 @@ $ uv run toml-combine example.toml --environment=production --service=frontend
 registry = "gcr.io/my-project/"
 service_account = "my-service-account"
 name = "service-frontend"
-[dimensions]
-environment = "production"
-service = "frontend"
 
 [container]
 image_name = "my-image-frontend"
@@ -201,9 +196,6 @@ $ toml-combine example.toml --environment=production --service=backend
 registry = "gcr.io/my-project/"
 service_account = "my-service-account"
 name = "service-backend"
-[dimensions]
-environment = "production"
-service = "backend"
 
 [container]
 image_name = "my-image-backend"
@@ -215,9 +207,6 @@ $ toml-combine example.toml --environment=staging --service=frontend
 registry = "gcr.io/my-project/"
 service_account = "my-service-account"
 name = "service-frontend"
-[dimensions]
-environment = "staging"
-service = "frontend"
 
 [container]
 image_name = "my-image-frontend"
@@ -228,9 +217,6 @@ $ toml-combine example.toml --environment=staging --service=backend
 registry = "gcr.io/my-project/"
 service_account = "my-service-account"
 name = "service-backend"
-[dimensions]
-environment = "staging"
-service = "backend"
 
 [container]
 image_name = "my-image-backend"
@@ -245,9 +231,6 @@ $ toml-combine example.toml --environment=dev --service=backend
 registry = "gcr.io/my-project/"
 service_account = "my-service-account"
 name = "service-backend"
-[dimensions]
-environment = "dev"
-service = "backend"
 
 [container]
 image_name = "my-image-backend"

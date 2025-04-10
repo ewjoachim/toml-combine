@@ -9,11 +9,6 @@
         "name": "frontend",
         "env": { "NEXT_PUBLIC_FOO": "baz" }
       }
-    },
-    "dimensions": {
-      "environment": "staging",
-      "stack": "next",
-      "type": "service"
     }
   },
   "staging-service-django-api": {
@@ -27,13 +22,7 @@
         "env": { "APP_FOO": "qux" }
       }
     },
-    "cloudsql_instance": "staging-postgres",
-    "dimensions": {
-      "environment": "staging",
-      "stack": "django",
-      "type": "service",
-      "service": "api"
-    }
+    "cloudsql_instance": "staging-postgres"
   },
   "staging-service-django-admin": {
     "registry": { "region": "us" },
@@ -46,13 +35,7 @@
         "env": { "APP_FOO": "qux", "APP_ID": 5678, "APP_ADMIN_ENABLED": true }
       }
     },
-    "cloudsql_instance": "staging-postgres",
-    "dimensions": {
-      "environment": "staging",
-      "stack": "django",
-      "type": "service",
-      "service": "admin"
-    }
+    "cloudsql_instance": "staging-postgres"
   },
   "staging-job-django-manage": {
     "registry": { "region": "us" },
@@ -65,13 +48,7 @@
         "command": ["./manage.py"]
       }
     },
-    "cloudsql_instance": "staging-postgres",
-    "dimensions": {
-      "environment": "staging",
-      "stack": "django",
-      "type": "job",
-      "job": "manage"
-    }
+    "cloudsql_instance": "staging-postgres"
   },
   "staging-job-django-special-command": {
     "registry": { "region": "us" },
@@ -86,13 +63,7 @@
         "args": ["special-command"]
       }
     },
-    "cloudsql_instance": "staging-postgres",
-    "dimensions": {
-      "environment": "staging",
-      "stack": "django",
-      "type": "job",
-      "job": "special-command"
-    }
+    "cloudsql_instance": "staging-postgres"
   },
   "production-service-next": {
     "registry": { "region": "us" },
@@ -104,11 +75,6 @@
         "service": { "min_scale": 1 }
       },
       "telemetry": { "enabled": true }
-    },
-    "dimensions": {
-      "environment": "production",
-      "stack": "next",
-      "type": "service"
     }
   },
   "production-service-django-api": {
@@ -122,13 +88,7 @@
         "env": { "APP_FOO": "bar" }
       }
     },
-    "cloudsql_instance": "production-postgres",
-    "dimensions": {
-      "environment": "production",
-      "stack": "django",
-      "type": "service",
-      "service": "api"
-    }
+    "cloudsql_instance": "production-postgres"
   },
   "production-service-django-admin": {
     "registry": { "region": "us" },
@@ -141,13 +101,7 @@
         "env": { "APP_FOO": "bar", "APP_ADMIN_ENABLED": true, "APP_ID": 1234 }
       }
     },
-    "cloudsql_instance": "production-postgres",
-    "dimensions": {
-      "environment": "production",
-      "stack": "django",
-      "type": "service",
-      "service": "admin"
-    }
+    "cloudsql_instance": "production-postgres"
   },
   "production-job-django-manage": {
     "registry": { "region": "us" },
@@ -160,13 +114,7 @@
         "command": ["./manage.py"]
       }
     },
-    "cloudsql_instance": "production-postgres",
-    "dimensions": {
-      "environment": "production",
-      "stack": "django",
-      "type": "job",
-      "job": "manage"
-    }
+    "cloudsql_instance": "production-postgres"
   },
   "production-job-django-special-command": {
     "registry": { "region": "us" },
@@ -181,12 +129,6 @@
         "args": ["special-command"]
       }
     },
-    "cloudsql_instance": "production-postgres",
-    "dimensions": {
-      "environment": "production",
-      "stack": "django",
-      "type": "job",
-      "job": "special-command"
-    }
+    "cloudsql_instance": "production-postgres"
   }
 }

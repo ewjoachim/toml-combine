@@ -4,7 +4,7 @@ import copy
 import dataclasses
 from collections.abc import Mapping, Sequence
 from functools import partial
-from typing import Any
+from typing import Any, TypeVar
 
 from . import exceptions
 
@@ -89,7 +89,10 @@ def override_sort_key(
     return tuple(result)
 
 
-def merge_configs(a: Any, b: Any, /) -> Any:
+T = TypeVar("T", dict, list, str, int, float, bool)
+
+
+def merge_configs(a: T, b: T, /) -> T:
     """
     Recursively merge two configuration dictionaries, with b taking precedence.
     """
@@ -100,7 +103,7 @@ def merge_configs(a: Any, b: Any, /) -> Any:
         return b
 
     result = a.copy()
-    for key, b_value in b.items():
+    for key, b_value in b.items():  # type: ignore
         if a_value := a.get(key):
             result[key] = merge_configs(a_value, b_value)
         else:
@@ -183,4 +186,4 @@ def generate_for_mapping(
         if mapping_matches_override(mapping=mapping, override=override):
             result = merge_configs(result, override.config)
 
-    return {"dimensions": mapping, **result}
+    return result
