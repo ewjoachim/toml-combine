@@ -22,6 +22,6 @@ def dumps(config: dict) -> str:
     # features. The easiest way to turn tomlkit objects into plain dicts and strings
     # is through a json round-trip.
     try:
-        return tomlkit.dumps(json.loads(json.dumps(config)))
+        return tomlkit.dumps(json.loads(json.dumps(config)), sort_keys=False)
     except tomlkit.exceptions.TOMLKitError as e:
         raise exceptions.TomlEncodeError from e
