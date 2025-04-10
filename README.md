@@ -184,7 +184,7 @@ container.env.ENABLE_EXPENSIVE_MONITORING = false
 This produces the following configs:
 
 ```console
-$ uv run toml-combine example.toml --environment=production --service=frontend
+$ toml-combine example.toml --environment=production --service=frontend
 registry = "gcr.io/my-project/"
 service_account = "my-service-account"
 name = "service-frontend"
