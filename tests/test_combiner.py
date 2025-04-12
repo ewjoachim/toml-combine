@@ -103,7 +103,7 @@ def test_merge_configs__dicts_error():
         ),
     ],
 )
-def test_generate_for_mapping(mapping: dict, expected: dict[str, int]):
+def __full_chain(mapping: dict, expected: dict[str, int]):
     default = {
         "a": 1,
         "b": 2,
@@ -138,8 +138,11 @@ def test_generate_for_mapping(mapping: dict, expected: dict[str, int]):
     ]
 
     result = combiner.generate_for_mapping(
-        default=default,
-        overrides=overrides,
+        config=combiner.Config(
+            dimensions={"env": ["prod", "staging"], "region": ["us"]},
+            default=default,
+            overrides=overrides,
+        ),
         mapping=mapping,
     )
     assert result == expected
@@ -224,10 +227,7 @@ def test_build_config():
 def test_build_config__duplicate_overrides():
     raw_config = """
     [dimensions]
-    env = ["dev", "prod"]
-
-    [templates]
-    foo = "bar"
+    env = ["prod"]
 
     [[override]]
     when.env = "prod"
@@ -241,6 +241,52 @@ def test_build_config__duplicate_overrides():
     config = toml.loads(raw_config)
     with pytest.raises(exceptions.DuplicateError):
         combiner.build_config(config)
+
+
+def test_build_config__duplicate_overrides_different_vars():
+    raw_config = """
+    [dimensions]
+    env = ["prod"]
+
+    [[override]]
+    when.env = "prod"
+    foo = "baz"
+
+    [[override]]
+    when.env = "prod"
+    baz = "qux"
+    """
+
+    config = toml.loads(raw_config)
+    assert len(combiner.build_config(config).overrides) == 2
+
+
+def test_build_config__duplicate_overrides_list():
+    raw_config = """
+    [dimensions]
+    env = ["prod", "dev"]
+
+    [[override]]
+    when.env = ["prod"]
+    foo = "baz"
+    hello = 1
+
+    [[override]]
+    when.env = ["prod", "dev"]
+    foo = "qux"
+    hello = 1
+    """
+
+    config = toml.loads(raw_config)
+    with pytest.raises(exceptions.DuplicateError) as excinfo:
+        combiner.build_config(config)
+
+    # Message is a bit complex so we test it too.
+    assert (
+        str(excinfo.value) == "In override {'env': ['prod', 'dev']}: "
+        "Overrides with the same dimensions cannot define the same configuration keys: "
+        "foo, hello"
+    )
 
 
 def test_build_config__dimension_not_found_in_override():
@@ -271,16 +317,79 @@ def test_build_config__dimension_value_not_found_in_override():
         combiner.build_config(config)
 
 
-@pytest.fixture
-def config():
-    return combiner.build_config(
+@pytest.mark.parametrize(
+    "mapping, expected",
+    [
+        (
+            {"env": "prod"},
+            {"foo": "bar"},
+        ),
+        (
+            {"env": "dev"},
+            {"foo": "baz"},
+        ),
+    ],
+)
+def test_generate_for_mapping__full_chain(mapping, expected):
+    config = combiner.build_config(
         toml.loads(
             """
-        [dimensions]
-        env = ["dev", "prod"]
+            [dimensions]
+            env = ["prod", "dev"]
 
-        [default]
-        foo = "bar"
-        """,
+            [default]
+            foo = "bar"
+
+            [[override]]
+            when.env = "dev"
+            foo = "baz"
+            """,
         )
     )
+    result = combiner.generate_for_mapping(
+        config=config,
+        mapping=mapping,
+    )
+    assert result == expected
+
+
+def test_extract_keys():
+    config = toml.loads(
+        """
+        a = 1
+        b.c = 1
+        b.d = 1
+        e.f.g = 1
+        """,
+    )
+
+    result = list(combiner.extract_keys(config))
+    assert result == [
+        ("a",),
+        ("b", "c"),
+        ("b", "d"),
+        ("e", "f", "g"),
+    ]
+
+
+def test_extract_definitions():
+    result = list(
+        combiner.extract_conditions_and_keys(
+            when={"env": ["dev", "staging"], "region": ["eu", "us"]},
+            config={
+                "a": 1,
+                "b.c.d": 4,
+            },
+        )
+    )
+    print(result)
+    assert result == [
+        ((("env", "dev"), ("region", "eu")), "a"),
+        ((("env", "dev"), ("region", "us")), "a"),
+        ((("env", "staging"), ("region", "eu")), "a"),
+        ((("env", "staging"), ("region", "us")), "a"),
+        ((("env", "dev"), ("region", "eu")), "b.c.d"),
+        ((("env", "dev"), ("region", "us")), "b.c.d"),
+        ((("env", "staging"), ("region", "eu")), "b.c.d"),
+        ((("env", "staging"), ("region", "us")), "b.c.d"),
+    ]
