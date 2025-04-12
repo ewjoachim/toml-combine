@@ -10,7 +10,7 @@ parts that are common to everyone.
 
 ### The config file
 
-The configuration file is usually a TOML file. Here's a small example:
+The configuration file is (usually) a TOML file. Here's a small example:
 
 ```toml
 [dimensions]
@@ -46,11 +46,14 @@ Overrides define a set of condition where they apply (`when.<dimension> =
 "<value>"`) and the values that are overriden. Overrides are applied in order from less
 specific to more specific, each one overriding the values of the previous ones:
 
-- If an override contains conditions on more dimensions than another one, it's applied
-  later
-- In case 2 overrides contain the same number of dimensions and they're a disjoint set,
-  then it depends on how the dimensions are defined at the top of the file: dimensions
-  defined last have a greater priority
+- In case 2 overrides are applicable, the more specific one (the one with more
+  dimensions defined) has greater priority
+- In case 2 overrides use the same number of dimensions, then it depends on how the
+  dimensions are defined at the top of the file: dimensions defined last have a greater
+  priority
+- In case 2 overrides use the same dimensions, if they define the same configuration
+  values, an error will be raised. If they define different configuation values, then
+  the priority is irrelevant.
 
 > [!Note]
 > Defining a list as the value of one or more conditions in an override
@@ -122,6 +125,9 @@ Example with the config from the previous section:
 
 ```console
 $ toml-combine path/to/config.toml --environment=staging
+```
+
+```toml
 [dimensions]
 environment = "staging"
 
@@ -183,6 +189,9 @@ This produces the following configs:
 
 ```console
 $ toml-combine example.toml --environment=production --service=frontend
+```
+
+```toml
 registry = "gcr.io/my-project/"
 service_account = "my-service-account"
 name = "service-frontend"
@@ -193,6 +202,9 @@ image_name = "my-image-frontend"
 
 ```console
 $ toml-combine example.toml --environment=production --service=backend
+```
+
+```toml
 registry = "gcr.io/my-project/"
 service_account = "my-service-account"
 name = "service-backend"
@@ -204,6 +216,9 @@ port = 8080
 
 ```console
 $ toml-combine example.toml --environment=staging --service=frontend
+```
+
+```toml
 registry = "gcr.io/my-project/"
 service_account = "my-service-account"
 name = "service-frontend"
@@ -214,6 +229,9 @@ image_name = "my-image-frontend"
 
 ```console
 $ toml-combine example.toml --environment=staging --service=backend
+```
+
+```toml
 registry = "gcr.io/my-project/"
 service_account = "my-service-account"
 name = "service-backend"
@@ -228,6 +246,9 @@ ENABLE_EXPENSIVE_MONITORING = false
 
 ```console
 $ toml-combine example.toml --environment=dev --service=backend
+```
+
+```toml
 registry = "gcr.io/my-project/"
 service_account = "my-service-account"
 name = "service-backend"
@@ -238,5 +259,4 @@ port = 8080
 [container.env]
 DEBUG = true
 ENABLE_EXPENSIVE_MONITORING = false
-
 ```

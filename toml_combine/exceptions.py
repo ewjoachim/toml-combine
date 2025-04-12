@@ -20,7 +20,7 @@ class TomlEncodeError(TomlCombineError):
 
 
 class DuplicateError(TomlCombineError):
-    """In {type} {id}: Cannot have multiple {type}s with the same dimensions."""
+    """In override {id}: Overrides with the same dimensions cannot define the same configuration keys: {details}"""
 
 
 class DimensionNotFound(TomlCombineError):

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import copy
 import dataclasses
-from collections.abc import Mapping, Sequence
+import itertools
+from collections.abc import Iterable, Mapping, Sequence
 from functools import partial
 from typing import Any, TypeVar
 
@@ -111,6 +112,35 @@ def merge_configs(a: T, b: T, /) -> T:
     return result
 
 
+def extract_keys(config: Any) -> Iterable[tuple[str, ...]]:
+    """
+    Extract the keys from a config.
+    """
+    if isinstance(config, dict):
+        for key, value in config.items():
+            for sub_key in extract_keys(value):
+                yield (key, *sub_key)
+    else:
+        yield tuple()
+
+
+def extract_conditions_and_keys(
+    when: dict[str, list[str]], config: dict[str, Any]
+) -> Iterable[tuple[Any, ...]]:
+    """
+    Extract the definitions from an override.
+    """
+    when_definitions = []
+    for key, values in when.items():
+        when_definitions.append([(key, value) for value in values])
+
+    when_combined_definitions = list(itertools.product(*when_definitions))
+    config_keys = extract_keys(config)
+    for config_key in config_keys:
+        for when_definition in when_combined_definitions:
+            yield (when_definition, *config_key)
+
+
 def build_config(config: dict[str, Any]) -> Config:
     config = copy.deepcopy(config)
     # Parse dimensions
@@ -119,7 +149,9 @@ def build_config(config: dict[str, Any]) -> Config:
     # Parse template
     default = config.pop("default", {})
 
-    seen_conditions = set()
+    # The rule is: the same exact set of conditions cannot be used twice to define
+    # the same values (on the same or different overrides)
+    seen_conditions_and_keys = set()
     overrides = []
     for override in config.pop("override", []):
         try:
@@ -132,20 +164,17 @@ def build_config(config: dict[str, Any]) -> Config:
             type="override",
         )
 
-        conditions = tuple((k, tuple(v)) for k, v in when.items())
-        if conditions in seen_conditions:
-            raise exceptions.DuplicateError(type="override", id=when)
-
-        seen_conditions.add(conditions)
-
-        overrides.append(
-            Override(
-                when=clean_dimensions_dict(
-                    to_sort=when, clean=dimensions, type="override"
-                ),
-                config=override,
-            )
+        conditions_and_keys = set(
+            extract_conditions_and_keys(when=when, config=override)
         )
+        if duplicates := (conditions_and_keys & seen_conditions_and_keys):
+            duplicate_str = ", ".join(sorted(key for *_, key in duplicates))
+            raise exceptions.DuplicateError(id=when, details=duplicate_str)
+
+        seen_conditions_and_keys |= conditions_and_keys
+
+        overrides.append(Override(when=when, config=override))
+
     # Sort overrides by increasing specificity
     overrides = sorted(
         overrides,
@@ -159,7 +188,7 @@ def build_config(config: dict[str, Any]) -> Config:
     )
 
 
-def mapping_matches_override(mapping: dict[str, str], override: Override) -> bool:
+def mapping_matches_override(mapping: Mapping[str, str], override: Override) -> bool:
     """
     Check if the values in the override match the given dimensions.
     """
@@ -174,13 +203,12 @@ def mapping_matches_override(mapping: dict[str, str], override: Override) -> boo
 
 
 def generate_for_mapping(
-    default: Mapping[str, Any],
-    overrides: Sequence[Override],
-    mapping: dict[str, str],
-) -> dict[str, Any]:
-    result = copy.deepcopy(default)
+    config: Config,
+    mapping: Mapping[str, str],
+) -> Mapping[str, Any]:
+    result = copy.deepcopy(config.default)
     # Apply each matching override
-    for override in overrides:
+    for override in config.overrides:
         # Check if all dimension values in the override match
 
         if mapping_matches_override(mapping=mapping, override=override):

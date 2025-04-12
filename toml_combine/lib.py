@@ -52,7 +52,6 @@ def combine(*, config=None, config_file=None, **mapping):
     config_obj = combiner.build_config(dict_config)
 
     return combiner.generate_for_mapping(
-        default=config_obj.default,
-        overrides=config_obj.overrides,
+        config=config_obj,
         mapping=mapping,
     )
