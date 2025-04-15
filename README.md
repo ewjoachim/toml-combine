@@ -1,5 +1,11 @@
 # Toml-combine
 
+[![Deployed to PyPI](https://img.shields.io/pypi/v/toml-combine?logo=pypi&logoColor=white)](https://pypi.org/pypi/toml-combine)
+[![Deployed to PyPI](https://img.shields.io/pypi/pyversions/toml-combine?logo=pypi&logoColor=white)](https://pypi.org/pypi/toml-combine)
+[![GitHub Repository](https://img.shields.io/github/stars/toml-combine-org/toml-combine?style=flat&logo=github&color=brightgreen)](https://github.com/toml-combine-org/toml-combine/)
+[![Continuous Integration](https://img.shields.io/github/actions/workflow/status/toml-combine-org/toml-combine/ci.yml?logo=github&branch=main)](https://github.com/toml-combine-org/toml-combine/actions?workflow=CI)
+[![MIT License](https://img.shields.io/github/license/toml-combine-org/toml-combine?logo=open-source-initiative&logoColor=white)](https://github.com/toml-combine-org/toml-combine/blob/main/LICENSE)
+
 `toml-combine` is a Python lib and CLI-tool that reads a TOML configuration file
 defining a default configuration alongside with overrides, and merges everything
 following rules you define to get final configurations. Let's say: you have multiple
@@ -43,7 +49,7 @@ The common configuration to start from, before we start overlaying overrides on 
 ### Overrides
 
 Overrides define a set of condition where they apply (`when.<dimension> =
-"<value>"`) and the values that are overridden when they're applicable.
+"<value>"`) and the values that are overridgden when they're applicable.
 
 - In case 2 overrides are applicable and define a value for the same key, if one is more
   specific than the other (e.g. env=prod,region=us is more specific than env=prod) then
