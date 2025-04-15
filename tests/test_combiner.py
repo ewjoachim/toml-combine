@@ -6,39 +6,6 @@ from toml_combine import combiner, exceptions, toml
 
 
 @pytest.mark.parametrize(
-    "small_override, large_override, dimensions",
-    [
-        pytest.param(
-            {"env": "prod"},
-            {"env": "prod", "region": "eu"},
-            {"env": ["prod"], "region": ["eu"]},
-            id="less_specific_override_comes_first",
-        ),
-        pytest.param(
-            {"env": "prod", "region": "eu"},
-            {"env": "prod", "service": "web"},
-            {"env": ["prod"], "region": ["eu"], "service": ["web"]},
-            id="different_dimensions_sorted_by_dimension",
-        ),
-        pytest.param(
-            {"env": "prod"},
-            {"region": "eu"},
-            {"env": ["prod"], "region": ["eu"]},
-            id="completely_different_dimensions",
-        ),
-    ],
-)
-def test_override_sort_key(small_override, large_override, dimensions):
-    small_key = combiner.override_sort_key(
-        combiner.Override(when=small_override, config={}), dimensions
-    )
-    large_key = combiner.override_sort_key(
-        combiner.Override(when=large_override, config={}), dimensions
-    )
-    assert small_key < large_key
-
-
-@pytest.mark.parametrize(
     "a, b, expected",
     [
         pytest.param(
@@ -224,7 +191,7 @@ def test_build_config():
     )
 
 
-def test_build_config__duplicate_overrides():
+def test_generate_for_mapping__duplicate_overrides():
     raw_config = """
     [dimensions]
     env = ["prod"]
@@ -238,9 +205,9 @@ def test_build_config__duplicate_overrides():
     foo = "qux"
     """
 
-    config = toml.loads(raw_config)
+    config = combiner.build_config(toml.loads(raw_config))
     with pytest.raises(exceptions.DuplicateError):
-        combiner.build_config(config)
+        combiner.generate_for_mapping(config=config, mapping={"env": "prod"})
 
 
 def test_build_config__duplicate_overrides_different_vars():
@@ -257,8 +224,11 @@ def test_build_config__duplicate_overrides_different_vars():
     baz = "qux"
     """
 
-    config = toml.loads(raw_config)
-    assert len(combiner.build_config(config).overrides) == 2
+    config = combiner.build_config(toml.loads(raw_config))
+    assert combiner.generate_for_mapping(config=config, mapping={"env": "prod"}) == {
+        "foo": "baz",
+        "baz": "qux",
+    }
 
 
 def test_build_config__duplicate_overrides_list():
@@ -268,24 +238,24 @@ def test_build_config__duplicate_overrides_list():
 
     [[override]]
     when.env = ["prod"]
-    foo = "baz"
-    hello = 1
+    hello.world = 1
 
     [[override]]
     when.env = ["prod", "dev"]
-    foo = "qux"
-    hello = 1
+    hello.world = 2
     """
 
-    config = toml.loads(raw_config)
+    config = combiner.build_config(toml.loads(raw_config))
     with pytest.raises(exceptions.DuplicateError) as excinfo:
-        combiner.build_config(config)
+        combiner.generate_for_mapping(config=config, mapping={"env": "prod"})
 
     # Message is a bit complex so we test it too.
     assert (
-        str(excinfo.value) == "In override {'env': ['prod', 'dev']}: "
-        "Overrides with the same dimensions cannot define the same configuration keys: "
-        "foo, hello"
+        str(excinfo.value)
+        == "In override {'env': ['prod', 'dev']}: Overrides defining the same "
+        "configuration keys must be included in one another or mutually exclusive.\n"
+        "Key defined multiple times: hello.world\n"
+        "Other override: {'env': ['prod']}"
     )
 
 
@@ -372,24 +342,54 @@ def test_extract_keys():
     ]
 
 
-def test_extract_definitions():
-    result = list(
-        combiner.extract_conditions_and_keys(
-            when={"env": ["dev", "staging"], "region": ["eu", "us"]},
-            config={
-                "a": 1,
-                "b.c.d": 4,
-            },
-        )
-    )
-    print(result)
-    assert result == [
-        ((("env", "dev"), ("region", "eu")), "a"),
-        ((("env", "dev"), ("region", "us")), "a"),
-        ((("env", "staging"), ("region", "eu")), "a"),
-        ((("env", "staging"), ("region", "us")), "a"),
-        ((("env", "dev"), ("region", "eu")), "b.c.d"),
-        ((("env", "dev"), ("region", "us")), "b.c.d"),
-        ((("env", "staging"), ("region", "eu")), "b.c.d"),
-        ((("env", "staging"), ("region", "us")), "b.c.d"),
-    ]
+@pytest.mark.parametrize(
+    "a, b, expected",
+    [
+        pytest.param(
+            {"env": ["dev"], "region": ["eu"]},
+            {"env": ["dev"]},
+            True,
+            id="subset1",
+        ),
+        pytest.param(
+            {"env": ["dev"]},
+            {"env": ["dev"], "region": ["eu"]},
+            True,
+            id="subset2",
+        ),
+        pytest.param(
+            {"env": ["prod"], "region": ["eu"]},
+            {"env": ["dev"]},
+            True,
+            id="subset3",
+        ),
+        pytest.param(
+            {"env": ["dev"]},
+            {"env": ["prod"], "region": ["eu"]},
+            True,
+            id="subset4",
+        ),
+        pytest.param({"env": ["dev"]}, {"region": ["eu"]}, False, id="disjoint"),
+        pytest.param(
+            {"env": ["dev"], "service": ["frontend"]},
+            {"region": ["eu"], "service": ["frontend"]},
+            False,
+            id="overlap",
+        ),
+        pytest.param({"env": ["dev"]}, {"env": ["dev"]}, False, id="same_keys1"),
+        pytest.param(
+            {"env": ["dev", "prod"]}, {"env": ["dev"]}, False, id="same_keys1"
+        ),
+        pytest.param(
+            {"env": ["prod"]}, {"env": ["dev"]}, True, id="same_keys_disjoint"
+        ),
+        pytest.param(
+            {"env": ["prod", "staging"]},
+            {"env": ["dev", "sandbox"]},
+            True,
+            id="multiple_keys_disjoint",
+        ),
+    ],
+)
+def test_are_conditions_compatible(a, b, expected):
+    assert combiner.are_conditions_compatible(a, b) == expected

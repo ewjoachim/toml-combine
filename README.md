@@ -43,17 +43,19 @@ The common configuration to start from, before we start overlaying overrides on 
 ### Overrides
 
 Overrides define a set of condition where they apply (`when.<dimension> =
-"<value>"`) and the values that are overriden. Overrides are applied in order from less
-specific to more specific, each one overriding the values of the previous ones:
+"<value>"`) and the values that are overridden when they're applicable.
 
-- In case 2 overrides are applicable, the more specific one (the one with more
-  dimensions defined) has greater priority
-- In case 2 overrides use the same number of dimensions, then it depends on how the
-  dimensions are defined at the top of the file: dimensions defined last have a greater
-  priority
-- In case 2 overrides use the same dimensions, if they define the same configuration
-  values, an error will be raised. If they define different configuation values, then
-  the priority is irrelevant.
+- In case 2 overrides are applicable and define a value for the same key, if one is more
+  specific than the other (e.g. env=prod,region=us is more specific than env=prod) then
+  its values will have precedence.
+- If they are mutually exclusive, (env=prod vs env=staging) precedence is irrelevant.
+- If you try to generate the configuration and 2 applicable overrides define a value for
+  the same key, an error will be raised (e.g. env=staging and region=eu). In that case,
+  you should add dimensions to either override to make them mutually exclusive or make
+  one more specific than the other.
+
+  Note that it's not a problem if incompatible overrides exist in your configuration, as
+  long as they are not both applicable in the same call.
 
 > [!Note]
 > Defining a list as the value of one or more conditions in an override
@@ -61,14 +63,11 @@ specific to more specific, each one overriding the values of the previous ones:
 
 ### The configuration itself
 
-Under the layer of `dimensions/default/override/mapping` system, what you actually define
-in the configuration is completely up to you. That said, only nested
+Under the layer of `dimensions/default/override/mapping` system, what you actually
+define in the configuration is completely up to you. That said, only nested
 "dictionnaries"/"objects"/"tables"/"mapping" (those are all the same things in
-Python/JS/Toml lingo) will be merged between the default and the overrides, while
-arrays will just replace one another. See `Arrays` below.
-
-In the generated configuration, the dimensions of the output will appear in the generated
-object as an object under the `dimensions` key.
+Python/JS/Toml lingo) will be merged between the default and the applicable overrides,
+while arrays will just replace one another. See `Arrays` below.
 
 ### Arrays
 
@@ -172,8 +171,9 @@ container.image_name = "my-image-backend"
 container.port = 8080
 
 [[override]]
-name = "service-dev"
+when.service = "backend"
 when.environment = "dev"
+name = "service-dev"
 container.env.DEBUG = true
 
 [[override]]
