@@ -81,6 +81,18 @@ def override_sort_key(
       {"env": "dev", "region": "us"} (less specific)
     - Override with {"env": "dev"} comes before override with {"region": "us"} ("env"
       is defined before "region" in the dimensions list)
+
+    Parameters:
+    -----------
+    override: An Override object that defines the condition when it applies
+                (override.when)
+    dimensions: The dict of all existing dimensions and their values, in order of
+                definition
+
+    Returns:
+    --------
+    A tuple that supports comparisons. Less specific Overrides should return smaller
+    values and vice versa.
     """
     result = [len(override.when)]
     for i, dimension in enumerate(dimensions):
