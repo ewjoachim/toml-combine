@@ -2,9 +2,9 @@
 
 [![Deployed to PyPI](https://img.shields.io/pypi/v/toml-combine?logo=pypi&logoColor=white)](https://pypi.org/pypi/toml-combine)
 [![Deployed to PyPI](https://img.shields.io/pypi/pyversions/toml-combine?logo=pypi&logoColor=white)](https://pypi.org/pypi/toml-combine)
-[![GitHub Repository](https://img.shields.io/github/stars/toml-combine-org/toml-combine?style=flat&logo=github&color=brightgreen)](https://github.com/toml-combine-org/toml-combine/)
-[![Continuous Integration](https://img.shields.io/github/actions/workflow/status/toml-combine-org/toml-combine/ci.yml?logo=github&branch=main)](https://github.com/toml-combine-org/toml-combine/actions?workflow=CI)
-[![MIT License](https://img.shields.io/github/license/toml-combine-org/toml-combine?logo=open-source-initiative&logoColor=white)](https://github.com/toml-combine-org/toml-combine/blob/main/LICENSE)
+[![GitHub Repository](https://img.shields.io/github/stars/ewjoachim/toml-combine?style=flat&logo=github&color=brightgreen)](https://github.com/ewjoachim/toml-combine/)
+[![Continuous Integration](https://img.shields.io/github/actions/workflow/status/ewjoachim/toml-combine/ci.yml?logo=github&branch=main)](https://github.com/ewjoachim/toml-combine/actions?workflow=CI)
+[![MIT License](https://img.shields.io/github/license/ewjoachim/toml-combine?logo=open-source-initiative&logoColor=white)](https://github.com/ewjoachim/toml-combine/blob/main/LICENSE)
 
 `toml-combine` is a Python lib and CLI-tool that reads a TOML configuration file
 defining a default configuration alongside with overrides, and merges everything
