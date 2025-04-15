@@ -128,9 +128,6 @@ $ toml-combine path/to/config.toml --environment=staging
 ```
 
 ```toml
-[dimensions]
-environment = "staging"
-
 [fruits]
 apple.color = "red"
 orange.color = "orange"
