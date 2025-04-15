@@ -49,6 +49,7 @@ cloudsql_instance = "staging-postgres"
 containers.app.env.APP_FOO = "qux"
 
 [[override]]
+when.stack = "django"
 # The following line defines when in an array. It's not useful, as there's only one
 # value,  but we want to test that arrays work too.
 when.service = ["admin"]
@@ -57,6 +58,7 @@ containers.app.env.APP_ADMIN_ENABLED = true
 containers.app.env.APP_ID = 1234
 
 [[override]]
+when.stack = "django"
 when.service = "admin"
 when.environment = "staging"
 containers.app.env.APP_ID = 5678
@@ -66,11 +68,13 @@ when.type = "job"
 containers.app.job.max_retries = 1
 
 [[override]]
+when.stack = "django"
 when.job = "manage"
 containers.app.name = "manage"
 containers.app.command = ["./manage.py"]
 
 [[override]]
+when.stack = "django"
 when.job = "special-command"
 containers.app.name = "special-command"
 containers.app.container_cpu = 8

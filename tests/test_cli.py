@@ -8,7 +8,7 @@ from toml_combine import cli, toml
 
 def test_cli__json(capsys):
     """Test the CLI."""
-    cli.cli(
+    exit_code = cli.cli(
         argv=[
             "tests/test.toml",
             "--format",
@@ -28,6 +28,7 @@ def test_cli__json(capsys):
     print(out)
     print("err:")
     print(err)
+    assert exit_code == 0
 
     expected = json.loads((pathlib.Path(__file__).parent / "result.json").read_text())
     assert json.loads(out) == expected["staging-service-django-admin"]

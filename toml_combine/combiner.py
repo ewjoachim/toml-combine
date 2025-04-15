@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import copy
 import dataclasses
-import itertools
 from collections.abc import Iterable, Mapping, Sequence
-from functools import partial
 from typing import Any, TypeVar
 
 from . import exceptions
@@ -60,48 +58,6 @@ def clean_dimensions_dict(
     return result
 
 
-def override_sort_key(
-    override: Override, dimensions: dict[str, list[str]]
-) -> tuple[int, ...]:
-    """
-    We sort overrides before applying them, and they are applied in the order of the
-    sorted list, each override replacing the common values of the previous overrides.
-
-    override_sort_key defines the sort key for overrides that ensures less specific
-    overrides come first:
-    - Overrides with fewer dimensions come first (will be overridden
-      by more specific ones)
-    - If two overrides have the same number of dimensions but define different
-      dimensions, we sort by the definition order of the dimensions.
-
-    Example:
-    dimensions = {"env": ["dev", "prod"], "region": ["us", "eu"]}
-
-    - Override with {"env": "dev"} comes before override with
-      {"env": "dev", "region": "us"} (less specific)
-    - Override with {"env": "dev"} comes before override with {"region": "us"} ("env"
-      is defined before "region" in the dimensions list)
-
-    Parameters:
-    -----------
-    override: An Override object that defines the condition when it applies
-                (override.when)
-    dimensions: The dict of all existing dimensions and their values, in order of
-                definition
-
-    Returns:
-    --------
-    A tuple that supports comparisons. Less specific Overrides should return smaller
-    values and vice versa.
-    """
-    result = [len(override.when)]
-    for i, dimension in enumerate(dimensions):
-        if dimension in override.when:
-            result.append(i)
-
-    return tuple(result)
-
-
 T = TypeVar("T", dict, list, str, int, float, bool)
 
 
@@ -136,21 +92,27 @@ def extract_keys(config: Any) -> Iterable[tuple[str, ...]]:
         yield tuple()
 
 
-def extract_conditions_and_keys(
-    when: dict[str, list[str]], config: dict[str, Any]
-) -> Iterable[tuple[Any, ...]]:
+def are_conditions_compatible(
+    a: Mapping[str, list[str]], b: Mapping[str, list[str]], /
+) -> bool:
     """
-    Extract the definitions from an override.
+    `a` and `b` are dictionaries representing override conditions (`when`). Return
+    `True` if the conditions represented by `a` are compatible. Conditions are
+    compatible if one is stricly more specific than the other or if they're mutually
+    exclusive.
     """
-    when_definitions = []
-    for key, values in when.items():
-        when_definitions.append([(key, value) for value in values])
+    # Subset
+    if set(a) < set(b) or set(b) < set(a):
+        return True
 
-    when_combined_definitions = list(itertools.product(*when_definitions))
-    config_keys = extract_keys(config)
-    for config_key in config_keys:
-        for when_definition in when_combined_definitions:
-            yield (when_definition, *config_key)
+    # Disjoint or overlapping sets
+    if set(a) != set(b):
+        return False
+
+    # Equal sets: it's only compatible if the values are disjoint
+    if any(set(a[key]) & set(b[key]) for key in a.keys()):
+        return False
+    return True
 
 
 def build_config(config: dict[str, Any]) -> Config:
@@ -161,9 +123,6 @@ def build_config(config: dict[str, Any]) -> Config:
     # Parse template
     default = config.pop("default", {})
 
-    # The rule is: the same exact set of conditions cannot be used twice to define
-    # the same values (on the same or different overrides)
-    seen_conditions_and_keys = set()
     overrides = []
     for override in config.pop("override", []):
         try:
@@ -176,22 +135,10 @@ def build_config(config: dict[str, Any]) -> Config:
             type="override",
         )
 
-        conditions_and_keys = set(
-            extract_conditions_and_keys(when=when, config=override)
-        )
-        if duplicates := (conditions_and_keys & seen_conditions_and_keys):
-            duplicate_str = ", ".join(sorted(key for *_, key in duplicates))
-            raise exceptions.DuplicateError(id=when, details=duplicate_str)
-
-        seen_conditions_and_keys |= conditions_and_keys
-
         overrides.append(Override(when=when, config=override))
 
     # Sort overrides by increasing specificity
-    overrides = sorted(
-        overrides,
-        key=partial(override_sort_key, dimensions=dimensions),
-    )
+    overrides = sorted(overrides, key=lambda override: len(override.when))
 
     return Config(
         dimensions=dimensions,
@@ -219,11 +166,28 @@ def generate_for_mapping(
     mapping: Mapping[str, str],
 ) -> Mapping[str, Any]:
     result = copy.deepcopy(config.default)
+    keys_to_conditions: dict[tuple[str, ...], list[dict[str, list[str]]]] = {}
     # Apply each matching override
     for override in config.overrides:
         # Check if all dimension values in the override match
 
         if mapping_matches_override(mapping=mapping, override=override):
+            # Check that all applicableoverrides are compatible
+            keys = extract_keys(override.config)
+
+            for key in keys:
+                previous_conditions = keys_to_conditions.setdefault(key, [])
+
+                for previous_condition in previous_conditions:
+                    if not are_conditions_compatible(previous_condition, override.when):
+                        raise exceptions.DuplicateError(
+                            id=override.when,
+                            key=".".join(key),
+                            other_override=previous_condition,
+                        )
+
+                keys_to_conditions[key].append(override.when)
+
             result = merge_configs(result, override.config)
 
     return result
