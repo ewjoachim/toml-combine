@@ -32,90 +32,6 @@ def test_merge_configs__dicts_error():
 
 
 @pytest.mark.parametrize(
-    "mapping, expected",
-    [
-        pytest.param(
-            {"env": "dev"},
-            {
-                "a": 1,
-                "b": 2,
-                "c": 3,
-                "d": {"e": {"h": {"i": {"j": 4}}}},
-                "g": 6,
-            },
-            id="no_matches",
-        ),
-        pytest.param(
-            {"env": "prod"},
-            {
-                "a": 10,
-                "b": 2,
-                "c": 30,
-                "d": {"e": {"h": {"i": {"j": 40}}}},
-                "g": 60,
-            },
-            id="single_match",
-        ),
-        pytest.param(
-            {"env": "staging"},
-            {
-                "a": 1,
-                "b": 200,
-                "c": 300,
-                "d": {"e": {"h": {"i": {"j": 400}}}},
-                "f": 500,
-                "g": 6,
-            },
-            id="dont_override_if_match_is_more_specific",
-        ),
-    ],
-)
-def test_generate_for_mapping(mapping: dict, expected: dict[str, int]):
-    default = {
-        "a": 1,
-        "b": 2,
-        "c": 3,
-        "d": {"e": {"h": {"i": {"j": 4}}}},
-        "g": 6,
-    }
-
-    overrides = [
-        combiner.Override(
-            when={"env": ["prod"]},
-            config={
-                "a": 10,
-                "c": 30,
-                "d": {"e": {"h": {"i": {"j": 40}}}},
-                "g": 60,
-            },
-        ),
-        combiner.Override(
-            when={"env": ["staging"]},
-            config={
-                "b": 200,
-                "c": 300,
-                "d": {"e": {"h": {"i": {"j": 400}}}},
-                "f": 500,
-            },
-        ),
-        combiner.Override(
-            when={"env": ["staging"], "region": ["us"]},
-            config={"f": 5000, "g": 6000},
-        ),
-    ]
-
-    result = combiner.generate_for_mapping(
-        config=combiner.Config(
-            dimensions={"env": ["prod", "staging"], "region": ["us"]},
-            default=default,
-            overrides=overrides,
-        ),
-        mapping=mapping,
-    )
-    assert result == expected
-
-
-@pytest.mark.parametrize(
     "mapping, override, expected",
     [
         (
@@ -191,74 +107,6 @@ def test_build_config():
     )
 
 
-def test_generate_for_mapping__duplicate_overrides():
-    raw_config = """
-    [dimensions]
-    env = ["prod"]
-
-    [[override]]
-    when.env = "prod"
-    foo = "baz"
-
-    [[override]]
-    when.env = "prod"
-    foo = "qux"
-    """
-
-    config = combiner.build_config(toml.loads(raw_config))
-    with pytest.raises(exceptions.DuplicateError):
-        combiner.generate_for_mapping(config=config, mapping={"env": "prod"})
-
-
-def test_build_config__duplicate_overrides_different_vars():
-    raw_config = """
-    [dimensions]
-    env = ["prod"]
-
-    [[override]]
-    when.env = "prod"
-    foo = "baz"
-
-    [[override]]
-    when.env = "prod"
-    baz = "qux"
-    """
-
-    config = combiner.build_config(toml.loads(raw_config))
-    assert combiner.generate_for_mapping(config=config, mapping={"env": "prod"}) == {
-        "foo": "baz",
-        "baz": "qux",
-    }
-
-
-def test_build_config__duplicate_overrides_list():
-    raw_config = """
-    [dimensions]
-    env = ["prod", "dev"]
-
-    [[override]]
-    when.env = ["prod"]
-    hello.world = 1
-
-    [[override]]
-    when.env = ["prod", "dev"]
-    hello.world = 2
-    """
-
-    config = combiner.build_config(toml.loads(raw_config))
-    with pytest.raises(exceptions.DuplicateError) as excinfo:
-        combiner.generate_for_mapping(config=config, mapping={"env": "prod"})
-
-    # Message is a bit complex so we test it too.
-    assert (
-        str(excinfo.value)
-        == "In override {'env': ['prod', 'dev']}: Overrides defining the same "
-        "configuration keys must be included in one another or mutually exclusive.\n"
-        "Key defined multiple times: hello.world\n"
-        "Other override: {'env': ['prod']}"
-    )
-
-
 def test_build_config__dimension_not_found_in_override():
     raw_config = """
     [dimensions]
@@ -285,42 +133,6 @@ def test_build_config__dimension_value_not_found_in_override():
     config = toml.loads(raw_config)
     with pytest.raises(exceptions.DimensionValueNotFound):
         combiner.build_config(config)
-
-
-@pytest.mark.parametrize(
-    "mapping, expected",
-    [
-        (
-            {"env": "prod"},
-            {"foo": "bar"},
-        ),
-        (
-            {"env": "dev"},
-            {"foo": "baz"},
-        ),
-    ],
-)
-def test_generate_for_mapping__full_chain(mapping, expected):
-    config = combiner.build_config(
-        toml.loads(
-            """
-            [dimensions]
-            env = ["prod", "dev"]
-
-            [default]
-            foo = "bar"
-
-            [[override]]
-            when.env = "dev"
-            foo = "baz"
-            """,
-        )
-    )
-    result = combiner.generate_for_mapping(
-        config=config,
-        mapping=mapping,
-    )
-    assert result == expected
 
 
 def test_extract_keys():
@@ -393,3 +205,189 @@ def test_extract_keys():
 )
 def test_are_conditions_compatible(a, b, expected):
     assert combiner.are_conditions_compatible(a, b) == expected
+
+
+@pytest.mark.parametrize(
+    "mapping, expected",
+    [
+        (
+            {"env": "prod"},
+            {"foo": "bar"},
+        ),
+        (
+            {"env": "staging"},
+            {"foo": "baz"},
+        ),
+    ],
+)
+def test_generate_for_mapping__simple_case(mapping, expected):
+    config = combiner.build_config(
+        toml.loads(
+            """
+            [dimensions]
+            env = ["prod", "staging"]
+
+            [default]
+            foo = "bar"
+
+            [[override]]
+            when.env = "staging"
+            foo = "baz"
+            """,
+        )
+    )
+    result = combiner.generate_for_mapping(
+        config=config,
+        mapping=mapping,
+    )
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "mapping, expected",
+    [
+        pytest.param(
+            {"env": "dev"},
+            {
+                "a": 1,
+                "b": 2,
+                "c": 3,
+                "d": {"e": {"h": {"i": {"j": 4}}}},
+                "g": 6,
+            },
+            id="no_matches",
+        ),
+        pytest.param(
+            {"env": "prod"},
+            {
+                "a": 10,
+                "b": 2,
+                "c": 30,
+                "d": {"e": {"h": {"i": {"j": 40}}}},
+                "g": 60,
+            },
+            id="single_match",
+        ),
+        pytest.param(
+            {"env": "staging"},
+            {
+                "a": 1,
+                "b": 200,
+                "c": 300,
+                "d": {"e": {"h": {"i": {"j": 400}}}},
+                "f": 500,
+                "g": 6,
+            },
+            id="dont_override_if_match_is_more_specific",
+        ),
+    ],
+)
+def test_generate_for_mapping__complex_case(mapping: dict, expected: dict[str, int]):
+    default = {
+        "a": 1,
+        "b": 2,
+        "c": 3,
+        "d": {"e": {"h": {"i": {"j": 4}}}},
+        "g": 6,
+    }
+
+    overrides = [
+        combiner.Override(
+            when={"env": ["prod"]},
+            config={
+                "a": 10,
+                "c": 30,
+                "d": {"e": {"h": {"i": {"j": 40}}}},
+                "g": 60,
+            },
+        ),
+        combiner.Override(
+            when={"env": ["staging"]},
+            config={
+                "b": 200,
+                "c": 300,
+                "d": {"e": {"h": {"i": {"j": 400}}}},
+                "f": 500,
+            },
+        ),
+        combiner.Override(
+            when={"env": ["staging"], "region": ["us"]},
+            config={"f": 5000, "g": 6000},
+        ),
+    ]
+    config = combiner.Config(
+        dimensions={"env": ["prod", "staging"], "region": ["us"]},
+        default=default,
+        overrides=overrides,
+    )
+
+    result = combiner.generate_for_mapping(config=config, mapping=mapping)
+    assert result == expected
+
+
+def test_generate_for_mapping__duplicate_overrides():
+    raw_config = """
+    [dimensions]
+    env = ["prod"]
+
+    [[override]]
+    when.env = "prod"
+    foo = "baz"
+
+    [[override]]
+    when.env = "prod"
+    foo = "qux"
+    """
+
+    config = combiner.build_config(toml.loads(raw_config))
+    with pytest.raises(exceptions.DuplicateError):
+        combiner.generate_for_mapping(config=config, mapping={"env": "prod"})
+
+
+def test_generate_for_mapping__duplicate_overrides_different_vars():
+    raw_config = """
+    [dimensions]
+    env = ["prod"]
+
+    [[override]]
+    when.env = "prod"
+    foo = "baz"
+
+    [[override]]
+    when.env = "prod"
+    baz = "qux"
+    """
+
+    config = combiner.build_config(toml.loads(raw_config))
+    assert combiner.generate_for_mapping(config=config, mapping={"env": "prod"}) == {
+        "foo": "baz",
+        "baz": "qux",
+    }
+
+
+def test_generate_for_mapping__duplicate_overrides_list():
+    raw_config = """
+    [dimensions]
+    env = ["prod", "dev"]
+
+    [[override]]
+    when.env = ["prod"]
+    hello.world = 1
+
+    [[override]]
+    when.env = ["prod", "dev"]
+    hello.world = 2
+    """
+
+    config = combiner.build_config(toml.loads(raw_config))
+    with pytest.raises(exceptions.DuplicateError) as excinfo:
+        combiner.generate_for_mapping(config=config, mapping={"env": "prod"})
+
+    # Message is a bit complex so we test it too.
+    assert (
+        str(excinfo.value)
+        == "In override {'env': ['prod', 'dev']}: Overrides defining the same "
+        "configuration keys must be included in one another or mutually exclusive.\n"
+        "Key defined multiple times: hello.world\n"
+        "Other override: {'env': ['prod']}"
+    )
