@@ -166,7 +166,7 @@ def generate_for_mapping(
     mapping: Mapping[str, str],
 ) -> Mapping[str, Any]:
     result = copy.deepcopy(config.default)
-    keys_to_conditions: dict[tuple[str, ...], list[dict[str, list[str]]]] = {}
+    keys_to_conditions: dict[tuple[str, ...], list[Mapping[str, list[str]]]] = {}
     # Apply each matching override
     for override in config.overrides:
         # Check if all dimension values in the override match
