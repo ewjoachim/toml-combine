@@ -70,7 +70,7 @@ def test_merge_configs__dicts_error():
         ),
     ],
 )
-def __full_chain(mapping: dict, expected: dict[str, int]):
+def test_generate_for_mapping(mapping: dict, expected: dict[str, int]):
     default = {
         "a": 1,
         "b": 2,
