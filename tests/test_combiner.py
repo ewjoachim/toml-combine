@@ -340,7 +340,7 @@ def test_generate_for_mapping__duplicate_overrides():
     """
 
     config = combiner.build_config(toml.loads(raw_config))
-    with pytest.raises(exceptions.DuplicateError):
+    with pytest.raises(exceptions.IncompatibleOverrides):
         combiner.generate_for_mapping(config=config, mapping={"env": "prod"})
 
 
@@ -380,7 +380,7 @@ def test_generate_for_mapping__duplicate_overrides_list():
     """
 
     config = combiner.build_config(toml.loads(raw_config))
-    with pytest.raises(exceptions.DuplicateError) as excinfo:
+    with pytest.raises(exceptions.IncompatibleOverrides) as excinfo:
         combiner.generate_for_mapping(config=config, mapping={"env": "prod"})
 
     # Message is a bit complex so we test it too.

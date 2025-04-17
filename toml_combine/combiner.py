@@ -180,7 +180,7 @@ def generate_for_mapping(
 
                 for previous_condition in previous_conditions:
                     if not are_conditions_compatible(previous_condition, override.when):
-                        raise exceptions.DuplicateError(
+                        raise exceptions.IncompatibleOverrides(
                             id=override.when,
                             key=".".join(key),
                             other_override=previous_condition,

@@ -19,7 +19,7 @@ class TomlEncodeError(TomlCombineError):
     """Error while encoding configuration file."""
 
 
-class DuplicateError(TomlCombineError):
+class IncompatibleOverrides(TomlCombineError):
     """In override {id}: Overrides defining the same configuration keys must be included in one another or mutually exclusive.\nKey defined multiple times: {key}\nOther override: {other_override}"""
 
 
