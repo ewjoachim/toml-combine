@@ -97,7 +97,7 @@ def are_conditions_compatible(
 ) -> bool:
     """
     `a` and `b` are dictionaries representing override conditions (`when`). Return
-    `True` if the conditions represented by `a` are compatible. Conditions are
+    `True` if the conditions represented by `a` are compatible with `b`. Conditions are
     compatible if one is stricly more specific than the other or if they're mutually
     exclusive.
     """
