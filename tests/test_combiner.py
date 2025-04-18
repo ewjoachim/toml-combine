@@ -75,16 +75,18 @@ def test_build_config():
     raw_config = """
     [dimensions]
     env = ["dev", "staging", "prod"]
+    region = ["eu"]
 
     [default]
     foo = "bar"
 
     [[override]]
     when.env = ["dev", "staging"]
+    when.region = ["eu"]
     foo = "baz"
 
     [[override]]
-    when.env = "prod"
+    when.env = "dev"
     foo = "qux"
     """
 
@@ -92,16 +94,18 @@ def test_build_config():
     config = combiner.build_config(config_dict)
 
     assert config == combiner.Config(
-        dimensions={"env": ["dev", "staging", "prod"]},
+        dimensions={"env": ["dev", "staging", "prod"], "region": ["eu"]},
         default={"foo": "bar"},
         overrides=[
+            # Note: The order of the overrides is important: more specific overrides
+            # must be listed last.
             combiner.Override(
-                when={"env": ["dev", "staging"]},
-                config={"foo": "baz"},
+                when={"env": ["dev"]},
+                config={"foo": "qux"},
             ),
             combiner.Override(
-                when={"env": ["prod"]},
-                config={"foo": "qux"},
+                when={"env": ["dev", "staging"], "region": ["eu"]},
+                config={"foo": "baz"},
             ),
         ],
     )
