@@ -54,18 +54,28 @@ Overrides define a set of condition where they apply (`when.<dimension> =
 - In case 2 overrides are applicable and define a value for the same key, if one is more
   specific than the other (e.g. env=prod,region=us is more specific than env=prod) then
   its values will have precedence.
-- If they are mutually exclusive, (env=prod vs env=staging) precedence is irrelevant.
-- If you try to generate the configuration and 2 applicable overrides define a value for
-  the same key, an error will be raised (e.g. env=staging and region=eu). In that case,
-  you should add dimensions to either override to make them mutually exclusive or make
-  one more specific than the other.
+- If 2 applicable overrides both define a dimension that the other one doesn't, they're
+  incompatible, and running the tool with a configuration that would select both of them
+  will yield an error.
 
-  Note that it's not a problem if incompatible overrides exist in your configuration, as
-  long as they are not both applicable in the same call.
+  Examples:
+  - Override 1: `env=staging` & Override 2: `region=eu` are incompatible (1 defines
+    `env` not in 2, 2 defines `region` not in 1).
+  - Override 1: `env=staging` & Override 2: `env=staging, region=eu` are compatible
+    (all dimensions defined in 1 are also in 2)
+  - Override 1: `env=staging` & Override 2: `env=prod` are compatible
+    (they define the same dimensions)
+  - Override 1: `env=staging, service=frontend` & Override 2: `region=eu, service=frontend`
+    are incompatible (1 defines `env` not in 2, 2 defines `region` not in 1)
 
 > [!Note]
-> Defining a list as the value of one or more conditions in an override
-> means that the override will apply to any of the dimension values of the list
+> Instead of defining a single value for the override dimensions, you can define a list.
+> This is a shortcut to duplicating the override with each individual value:
+> ```
+> [[override]]
+> when.environment = ["staging", "prod"]
+> service_account = "my-service-account"
+> ```
 
 ### The configuration itself
 
