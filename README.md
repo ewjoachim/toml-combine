@@ -52,7 +52,7 @@ Overrides define a set of condition where they apply (`when.<dimension> =
 "<value>"`) and the values that are overridgden when they're applicable.
 
 - In case 2 overrides are applicable and define a value for the same key, if one is more
-  specific than the other (e.g. env=prod,region=us is more specific than env=prod) then
+  specific than the other (e.g. `env=prod, region=us` is more specific than `env=prod`) then
   its values will have precedence.
 - If 2 applicable overrides both define a dimension that the other one doesn't, they're
   incompatible, and running the tool with a configuration that would select both of them
