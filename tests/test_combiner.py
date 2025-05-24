@@ -390,8 +390,7 @@ def test_generate_for_mapping__duplicate_overrides_list():
     # Message is a bit complex so we test it too.
     assert (
         str(excinfo.value)
-        == "In override {'env': ['prod', 'dev']}: Overrides defining the same "
-        "configuration keys must be included in one another or mutually exclusive.\n"
-        "Key defined multiple times: hello.world\n"
-        "Other override: {'env': ['prod']}"
+        == "Incompatible overrides `{'env': ['prod', 'dev']}` and `{'env': ['prod']}`: "
+        "When they're both applicable, overrides defining a common overridden key (hello.world) "
+        "must be a subset of one another"
     )

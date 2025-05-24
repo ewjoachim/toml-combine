@@ -21,6 +21,7 @@ class Override:
 class Config:
     dimensions: Mapping[str, list[str]]
     default: Mapping[str, Any]
+    # List of overrides, in order of increasing specificity
     overrides: Sequence[Override]
 
 
@@ -30,6 +31,7 @@ def clean_dimensions_dict(
     """
     Recreate a dictionary of dimension values with the same order as the
     dimensions list.
+    Also check that the values are valid.
     """
     result = {}
     if invalid_dimensions := set(to_sort) - set(clean):
@@ -63,7 +65,7 @@ T = TypeVar("T", dict, list, str, int, float, bool)
 
 def merge_configs(a: T, b: T, /) -> T:
     """
-    Recursively merge two configuration dictionaries, with b taking precedence.
+    Recursively merge two configuration dictionaries a and b, with b taking precedence.
     """
     if isinstance(a, dict) != isinstance(b, dict):
         raise ValueError(f"Cannot merge {type(a)} with {type(b)}")
@@ -116,6 +118,9 @@ def are_conditions_compatible(
 
 
 def build_config(config: dict[str, Any]) -> Config:
+    """
+    Build a finalized Config object from the given configuration dictionary.
+    """
     config = copy.deepcopy(config)
     # Parse dimensions
     dimensions = config.pop("dimensions")
@@ -165,6 +170,13 @@ def generate_for_mapping(
     config: Config,
     mapping: Mapping[str, str],
 ) -> Mapping[str, Any]:
+    """
+    Generate a configuration based on the provided mapping of dimension values.
+    The mapping should contain only the dimensions defined in the config.
+    If a dimension is not defined in the mapping, the default value for that
+    dimension will be used.
+    """
+
     result = copy.deepcopy(config.default)
     keys_to_conditions: dict[tuple[str, ...], list[Mapping[str, list[str]]]] = {}
     # Apply each matching override

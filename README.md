@@ -48,29 +48,58 @@ The common configuration to start from, before we start overlaying overrides on 
 
 ### Overrides
 
-Overrides define a set of condition where they apply (`when.<dimension> =
-"<value>"`) and the values that are overridgden when they're applicable.
+Each override defines a set of condition where it applies (`when.<dimension> =
+"<dimension_value>"`) and a set of overridden key/values.
 
-- In case 2 overrides are applicable and define a value for the same key, if one is more
-  specific than the other (e.g. `env=prod, region=us` is more specific than `env=prod`) then
-  its values will have precedence.
-- If 2 applicable overrides both define a dimension that the other one doesn't, they're
-  incompatible, and running the tool with a configuration that would select both of them
-  will yield an error.
+```toml
+[[override]]
+# Conditions
+when.environment = "staging"
+when.region = "us"
 
-  Examples:
-  - Override 1: `env=staging` & Override 2: `region=eu` are incompatible (1 defines
-    `env` not in 2, 2 defines `region` not in 1).
-  - Override 1: `env=staging` & Override 2: `env=staging, region=eu` are compatible
-    (all dimensions defined in 1 are also in 2)
-  - Override 1: `env=staging` & Override 2: `env=prod` are compatible
-    (they define the same dimensions)
-  - Override 1: `env=staging, service=frontend` & Override 2: `region=eu, service=frontend`
-    are incompatible (1 defines `env` not in 2, 2 defines `region` not in 1)
+# Overridden keys / values
+service_account = "my-us-staging-service-account"
+```
+
+If two overrides are both applicable in the same run of `toml-combine`, they will be
+checked for _compatibility_ with one another, and an error if they're not compatible.
+
+Compatibility rules:
+
+- If the two overrides don't share any overridden key, then they're always compatible.
+- If the conditions of an override are a subset of the condition of the other one,
+  they're compatible. Also, in that case, the overridden values of the more specific one
+  **will have precedence**.
+- If they both define a dimension that the other one doesn't, they're incompatible.
+
+Example of incompatible overrides: neither is a subset of the other one and they both
+define a value for `foo`:
+
+```toml
+[dimensions]
+environment = ["staging"]
+region = ["eu"]
+
+[[override]]
+when.environment = "staging"
+foo = "bar"
+
+[[override]]
+when.region = "eu"
+foo = "baz"
+```
+
+```console
+$ toml-combine config.toml --environment=staging --region=eu
+Error: Incompatible overrides `{'region': ['eu']}` and `{'environment': ['staging']}`:
+When they're both applicable, overrides defining a common overridden key (foo) must be
+a subset of one another
+```
 
 > [!Note]
 > Instead of defining a single value for the override dimensions, you can define a list.
 > This is a shortcut to duplicating the override with each individual value:
+>
 > ```
 > [[override]]
 > when.environment = ["staging", "prod"]

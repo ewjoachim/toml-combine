@@ -70,7 +70,7 @@ def cli(argv) -> int:
     try:
         config = combiner.build_config(dict_config)
     except exceptions.TomlCombineError as exc:
-        print(exc, file=sys.stderr)
+        print(f"Error: {exc}", file=sys.stderr)
         return 1
 
     # Parse all arguments
@@ -86,7 +86,7 @@ def cli(argv) -> int:
     try:
         result = lib.combine(config=dict_config, **mapping)
     except exceptions.TomlCombineError as exc:
-        print(exc, file=sys.stderr)
+        print(f"Error: {exc}", file=sys.stderr)
         return 1
 
     if args.format == "toml":

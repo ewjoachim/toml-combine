@@ -20,7 +20,7 @@ class TomlEncodeError(TomlCombineError):
 
 
 class IncompatibleOverrides(TomlCombineError):
-    """In override {id}: Overrides defining the same configuration keys must be included in one another or mutually exclusive.\nKey defined multiple times: {key}\nOther override: {other_override}"""
+    """Incompatible overrides `{id}` and `{other_override}`: When they're both applicable, overrides defining a common overridden key ({key}) must be a subset of one another"""
 
 
 class DimensionNotFound(TomlCombineError):
