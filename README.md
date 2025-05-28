@@ -27,7 +27,10 @@ name = "my-service"
 registry = "gcr.io/my-project/"
 container.image_name = "my-image"
 container.port = 8080
-service_account = "my-service-account"
+
+[[override]]
+when.environment = "production"
+service_account = "my-production-service-account"
 
 [[override]]
 when.environment = "staging"
@@ -53,50 +56,107 @@ Each override defines a set of condition where it applies (`when.<dimension> =
 
 ```toml
 [[override]]
-# Conditions
+# Keys starting with `when.` are "conditions"
 when.environment = "staging"
 when.region = "us"
 
-# Overridden keys / values
+# Other keys in an override are "overridden keys" / "overridden values"
 service_account = "my-us-staging-service-account"
 ```
 
-If two overrides are both applicable in the same run of `toml-combine`, they will be
-checked for _compatibility_ with one another, and an error if they're not compatible.
+If you run `toml-combine` with a given mapping that selects multiple overrides, they
+will be checked for _compatibility_ with one another, and an error will be raised if
+they're _not compatible_.
 
 Compatibility rules:
 
-- If the two overrides don't share any overridden key, then they're always compatible.
-- If the conditions of an override are a subset of the condition of the other one,
-  they're compatible. Also, in that case, the overridden values of the more specific one
-  **will have precedence**.
+- If the two overrides don't share any _overridden key_, then they're always compatible.
+
+  <details>
+  <summary>Example (click to expand)</summary>
+
+  ```toml
+  [dimensions]
+  environment = ["staging"]
+  region = ["eu"]
+
+  [[override]]
+  when.environment = "staging"
+  service_account = "my-staging-service-account"
+
+  [[override]]
+  when.region = "eu"
+  env.CURRENCY = "EUR"
+  ```
+
+  </details>
+
+- If an override defines a set of conditions (say `env=prod`) and the other one defines
+  strictly more conditions (say `env=prod, region=eu`, in other words, it defines all
+  the conditions of the first override and then some more), then they're compatible.
+  Also, in that case, **the override with more conditions will have precedence**.
+
+  <details>
+  <summary>Example</summary>
+
+  ```toml
+  [dimensions]
+  environment = ["staging"]
+  region = ["eu"]
+
+  [[override]]
+  when.environment = "staging"
+  service_account = "my-staging-service-account"
+
+  [[override]]
+  when.environment = "staging"
+  when.region = "eu"
+  service_account = "my-staging-eu-service-account"
+  ```
+
+  </details>
+
 - If they both define a dimension that the other one doesn't, they're incompatible.
 
-Example of incompatible overrides: neither is a subset of the other one and they both
-define a value for `foo`:
+  <details>
+  <summary>Example (click to expand)</summary>
 
-```toml
-[dimensions]
-environment = ["staging"]
-region = ["eu"]
+  Incompatible overrides: neither is a subset of the other one and they both
+  define a value for `service_account`:
 
-[[override]]
-when.environment = "staging"
-foo = "bar"
+  ```toml
+  [dimensions]
+  environment = ["staging"]
+  region = ["eu"]
 
-[[override]]
-when.region = "eu"
-foo = "baz"
-```
+  [default]
+  service_account = "my-service-account"
 
-```console
-$ toml-combine config.toml --environment=staging --region=eu
-Error: Incompatible overrides `{'region': ['eu']}` and `{'environment': ['staging']}`:
-When they're both applicable, overrides defining a common overridden key (foo) must be
-a subset of one another
-```
+  [[override]]
+  when.environment = "staging"
+  service_account = "my-staging-service-account"
 
-> [!Note]
+  [[override]]
+  when.region = "eu"
+  service_account = "my-eu-service-account"
+  ```
+
+  ```console
+  $ toml-combine config.toml --environment=staging --region=eu
+  Error: Incompatible overrides `{'region': ['eu']}` and `{'environment': ['staging']}`:
+  When they're both applicable, overrides defining a common overridden key (foo) must be
+  a subset of one another
+  ```
+
+  > [!NOTE]
+  > It's ok to have incompatible overrides in your config as long as you don't
+  > run `toml-combine` with a mapping that would select both of them. In the example
+  > above, if you run `toml-combine --environment=staging --region=eu`, the error
+  > will be triggered, but you can run `toml-combine --environment=staging`.
+
+  </details>
+
+> [!NOTE]
 > Instead of defining a single value for the override dimensions, you can define a list.
 > This is a shortcut to duplicating the override with each individual value:
 >
