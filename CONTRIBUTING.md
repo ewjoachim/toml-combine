@@ -14,21 +14,40 @@ or using a package manager, such as [brew](https://brew.sh/):
 $ brew install uv
 ```
 
-Then you can directly launch the tests with:
+### Work with UV (will handle the venv for you)
+
+**Run tests**
 
 ```console
 $ uv run pytest
 ```
 
-or create a virtual environment to work on the package and activate it:
+**Run the command**
+
+```console
+$ uv run toml-combine --help
+```
+
+### Work with a classic virtual environment
+
+**Create and activate a virtual environment**
 
 ```console
 $ uv sync
 $ source .venv/bin/activate
 ```
 
-or launch the command itself with uv (no need to activate the venv):
+**Run tests**
 
 ```console
-$ uv run toml-combine --help
+$ pytest
 ```
+
+**Run the command**
+
+```console
+$ toml-combine --help
+```
+
+> [!NOTE]
+> In this venv, if you need `pip` you can use `uv pip` instead, it works the same.
