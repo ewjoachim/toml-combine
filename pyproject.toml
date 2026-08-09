@@ -41,7 +41,7 @@ default-groups = ["test"]
 
 [dependency-groups]
 test = ["pytest>=8.3.5"]
-lint = ["ruff"]
+lint = ["ruff", "zizmor"]
 
 [project.scripts]
 toml-combine = "toml_combine.cli:run_cli"
@@ -60,7 +60,7 @@ unsafe-fixes = true
 # I  => isort
 # UP => pyupgrade
 # PL => pylint
-select = ["UP", "E", "F", "W", "PL", "I", "TID"]
+select = ["UP", "E", "F", "W", "PL", "I", "TID", "T10"]
 ignore = [
     "E501",    # "Line too long"
     "E402",    # "Module level import not at top of file"
