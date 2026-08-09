@@ -41,6 +41,7 @@ default-groups = ["test"]
 
 [dependency-groups]
 test = ["pytest>=8.3.5"]
+lint = ["ruff"]
 
 [project.scripts]
 toml-combine = "toml_combine.cli:run_cli"
