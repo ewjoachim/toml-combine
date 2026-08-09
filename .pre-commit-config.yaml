@@ -37,3 +37,11 @@ repos:
         language: system
         files: ^(uv\.lock|pyproject\.toml|uv\.toml)$
         pass_filenames: false
+
+      - id: zizmor
+        name: zizmor
+        entry: uv run --group lint zizmor --no-progress --fix=all
+        language: system
+        types: [yaml]
+        files: (\.github/(workflows/.*|dependabot\.ya?ml))|(action\.ya?ml)$
+        require_serial: true
