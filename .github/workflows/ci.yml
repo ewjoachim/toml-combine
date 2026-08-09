@@ -11,22 +11,30 @@ on:
 env:
   UV_FROZEN: "true"
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     name: "Lint"
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@f0ec1fc3b38f5e7cd731bb6ce540c5af426746bb # v6
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          python-version: "3.14"
+          enable-cache: false
 
       - name: Install dependencies
         run: uv sync --all-groups
 
       - name: Run prek
-        run: uvx prek run --all-files
+        run: uv run --group lint prek run --all-files
 
   tests:
     strategy:
@@ -42,12 +50,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           python-version: ${{ matrix.python-version }}
+          enable-cache: false
 
       - name: Run tests
         run: uv run pytest
@@ -62,17 +73,20 @@ jobs:
     needs:
       - tests
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
           fetch-tags: true
           ref: ${{ github.ref }}
+          persist-credentials: false
 
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: false
 
       - name: Build wheel & sdist
         run: uv build
 
       - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
